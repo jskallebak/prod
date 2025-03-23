@@ -48,6 +48,26 @@ func (a AuthService) Login(ctx context.Context, email, password string) (*sqlc.U
 	return &user, nil
 }
 
+func (a AuthService) GetCurrentUser(ctx context.Context) (*sqlc.User, error) {
+	token, err := auth.ReadToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the token: %w", err)
+	}
+
+	claim, err := auth.VerifyJWT(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to veriry token: %w", err)
+	}
+
+	email := claim.Email
+	user, err := a.queries.GetUser(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("user in token not found in database: %w", err)
+	}
+
+	return &user, nil
+}
+
 func (a AuthService) GetHash(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), COST)
 	if err != nil {

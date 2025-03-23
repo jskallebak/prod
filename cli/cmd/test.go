@@ -23,7 +23,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("test called")
+		fmt.Println("Testing current user authentication...")
+
 		dbpool, queries, ok := util.InitDBAndQueriesCLI()
 		if !ok {
 			return
@@ -32,11 +33,19 @@ to quickly create a Cobra application.`,
 
 		auth := services.NewAuthService(queries)
 
-		user, err := auth.Login(context.Background(), "testd@example.com", "asdf")
+		// Try to get the current user
+		user, err := auth.GetCurrentUser(context.Background())
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("No authenticated user found: %v\n", err)
+			return
 		}
-		fmt.Println(user)
+
+		fmt.Println("Successfully retrieved current user:")
+		fmt.Printf("ID: %d\n", user.ID)
+		fmt.Printf("Email: %s\n", user.Email)
+		if user.Name.Valid {
+			fmt.Printf("Name: %s\n", user.Name.String)
+		}
 	},
 }
 

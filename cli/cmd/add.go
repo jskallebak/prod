@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
@@ -42,15 +41,12 @@ For example:
 		description := strings.Join(args, " ")
 
 		// Initialize DB connection
-		dbpool, err := util.InitDB()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error connecting to database: %v\n", err)
-			os.Exit(1)
+		dbpool, queries, ok := util.InitDBAndQueriesCLI()
+		if !ok {
+			return
 		}
 		defer dbpool.Close()
 
-		// Create queries and service
-		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
 
 		// Create parameters for new task

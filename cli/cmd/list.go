@@ -7,7 +7,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
@@ -16,7 +18,9 @@ import (
 
 // listCmd represents the list command
 var (
-	listPriority string
+	listPriority   string
+	debugMode      bool
+	createTestData bool
 )
 
 var listCmd = &cobra.Command{
@@ -29,8 +33,6 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
-
 		dbpool, err := util.InitDB()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error connecting to database: %v\n", err)
@@ -46,7 +48,33 @@ to quickly create a Cobra application.`,
 		// Handle priority flag
 		var priorityPtr *string
 		if cmd.Flags().Changed("priority") {
-			priorityPtr = &listPriority
+			// Convert priority to uppercase for case-insensitive matching
+			uppercasePriority := strings.ToUpper(listPriority)
+			priorityPtr = &uppercasePriority
+		}
+
+		if debugMode {
+			fmt.Printf("Debug: Querying tasks for user ID: %d\n", userID)
+			if priorityPtr != nil {
+				fmt.Printf("Debug: Filtering by priority: %s\n", *priorityPtr)
+			}
+
+			// Print DB connection info
+			fmt.Printf("Debug: Database connection established: %v\n", dbpool != nil)
+
+			// Print SQL query test
+			countTest, err := queries.CountTasks(context.Background(), sqlc.CountTasksParams{
+				UserID: pgtype.Int4{
+					Int32: int32(userID),
+					Valid: true,
+				},
+			})
+			if err != nil {
+				fmt.Printf("Debug: Error running test query: %v\n", err)
+			} else {
+				fmt.Printf("Debug: Database has %d total tasks, %d pending, %d completed\n",
+					countTest.TotalTasks, countTest.PendingTasks, countTest.CompletedTasks)
+			}
 		}
 
 		tasks, err := taskService.ListTasks(context.Background(), userID, priorityPtr)
@@ -55,11 +83,36 @@ to quickly create a Cobra application.`,
 			return
 		}
 
+		if debugMode {
+			fmt.Printf("Debug: Query returned %d tasks\n", len(tasks))
+		}
+
 		if len(tasks) == 0 {
+			if createTestData {
+				// Create a test task for debugging
+				testParams := services.TaskParams{
+					Description: "Test task (auto-generated)",
+					Tags:        []string{"test", "debug"},
+				}
+				priority := "M"
+				testParams.Priority = &priority
+
+				testTask, err := taskService.CreateTask(context.Background(), int64(userID), testParams)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error creating test task: %v\n", err)
+					return
+				}
+
+				fmt.Printf("Created test task: %s (ID: %d)\n", testTask.Description, testTask.ID)
+				fmt.Println("Run 'prod task list' again to see it.")
+				return
+			}
+
 			if cmd.Flags().Changed("priority") {
 				fmt.Printf("No tasks found with priority '%s'\n", listPriority)
 			} else {
 				fmt.Println("No tasks found")
+				fmt.Println("\nTip: Create a task with: prod task add \"My first task\"")
 			}
 			return
 		}
@@ -98,6 +151,12 @@ func init() {
 
 	// Add priority flag for filtering tasks
 	listCmd.Flags().StringVarP(&listPriority, "priority", "p", "", "Filter tasks by priority (H, M, L)")
+
+	// Add debug flag
+	listCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
+
+	// Add test data flag
+	listCmd.Flags().BoolVar(&createTestData, "test-data", false, "Create a test task if none exist")
 
 	// Here you will define your flags and configuration settings.
 

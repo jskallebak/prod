@@ -88,7 +88,9 @@ For example:
 
 		// Add priority if provided
 		if cmd.Flags().Changed("priority") {
-			params.Priority = &taskPriority
+			// Convert priority to uppercase for case-insensitive matching
+			uppercasePriority := strings.ToUpper(taskPriority)
+			params.Priority = &uppercasePriority
 		}
 
 		// Add project ID if provided

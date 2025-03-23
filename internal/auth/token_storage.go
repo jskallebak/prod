@@ -62,7 +62,8 @@ func RemoveToken() error {
 	err = os.Remove(tokenPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+
+			return errors.New("Already logged out")
 		}
 		return fmt.Errorf("could not remove the token: %w", err)
 	}

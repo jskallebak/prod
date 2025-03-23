@@ -18,9 +18,8 @@ import (
 
 // listCmd represents the list command
 var (
-	listPriority   string
-	debugMode      bool
-	createTestData bool
+	listPriority string
+	debugMode    bool
 )
 
 var listCmd = &cobra.Command{
@@ -88,26 +87,6 @@ to quickly create a Cobra application.`,
 		}
 
 		if len(tasks) == 0 {
-			if createTestData {
-				// Create a test task for debugging
-				testParams := services.TaskParams{
-					Description: "Test task (auto-generated)",
-					Tags:        []string{"test", "debug"},
-				}
-				priority := "M"
-				testParams.Priority = &priority
-
-				testTask, err := taskService.CreateTask(context.Background(), int64(userID), testParams)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error creating test task: %v\n", err)
-					return
-				}
-
-				fmt.Printf("Created test task: %s (ID: %d)\n", testTask.Description, testTask.ID)
-				fmt.Println("Run 'prod task list' again to see it.")
-				return
-			}
-
 			if cmd.Flags().Changed("priority") {
 				fmt.Printf("No tasks found with priority '%s'\n", listPriority)
 			} else {
@@ -154,9 +133,6 @@ func init() {
 
 	// Add debug flag
 	listCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
-
-	// Add test data flag
-	listCmd.Flags().BoolVar(&createTestData, "test-data", false, "Create a test task if none exist")
 
 	// Here you will define your flags and configuration settings.
 

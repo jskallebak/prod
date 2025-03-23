@@ -6,7 +6,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jskallebak/prod/internal/auth"
+	"github.com/jskallebak/prod/internal/services"
+	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +23,16 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("test called")
-		auth.RemoveToken()
+		dbpool, queries, ok := util.InitDBAndQueriesCLI()
+		if !ok {
+			return
+		}
+		defer dbpool.Close()
+
+		auth := services.NewAuthService(queries)
+
+		str, _ := auth.GetHash("asdf")
+		fmt.Println(str)
 	},
 }
 

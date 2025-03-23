@@ -19,18 +19,28 @@ import (
 // listCmd represents the list command
 var (
 	listPriority string
+	listProject  string
 	debugMode    bool
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "List your tasks",
+	Long: `List all your tasks or filter them by priority.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Examples:
+  prod task list                 # List all tasks
+  prod task list --priority=H    # List only high priority tasks
+  prod task list -p M            # List only medium priority tasks
+  
+Priority levels:
+  H - High
+  M - Medium
+  L - Low
+  
+  prod task list --project=ProjectName
+  prod task list -P ProjectName`,
+
 	Run: func(cmd *cobra.Command, args []string) {
 		dbpool, err := util.InitDB()
 		if err != nil {
@@ -52,6 +62,13 @@ to quickly create a Cobra application.`,
 			priorityPtr = &uppercasePriority
 		}
 
+		var projectPtr *string
+		if cmd.Flags().Changed("project") {
+			uppercaseProject := strings.ToUpper(listProject)
+			projectPtr = &uppercaseProject
+		}
+
+		//TODO: remove when done with list.go
 		if debugMode {
 			fmt.Printf("Debug: Querying tasks for user ID: %d\n", userID)
 			if priorityPtr != nil {
@@ -76,7 +93,7 @@ to quickly create a Cobra application.`,
 			}
 		}
 
-		tasks, err := taskService.ListTasks(context.Background(), userID, priorityPtr)
+		tasks, err := taskService.ListTasks(context.Background(), userID, priorityPtr, projectPtr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return
@@ -89,6 +106,8 @@ to quickly create a Cobra application.`,
 		if len(tasks) == 0 {
 			if cmd.Flags().Changed("priority") {
 				fmt.Printf("No tasks found with priority '%s'\n", listPriority)
+			} else if cmd.Flags().Changed("project") {
+				fmt.Printf("No tasks found with project '%s'\n", listProject)
 			} else {
 				fmt.Println("No tasks found")
 				fmt.Println("\nTip: Create a task with: prod task add \"My first task\"")
@@ -109,6 +128,11 @@ to quickly create a Cobra application.`,
 			} else {
 				fmt.Println("Priority: None")
 			}
+			if task.ProjectID.Valid {
+				fmt.Printf("Project: %v\n", task.ProjectID.Int32)
+			} else {
+				fmt.Println("Project: None")
+			}
 			if task.DueDate.Valid {
 				fmt.Printf("Due: %s\n", task.DueDate.Time.Format("2006-01-02"))
 			} else {
@@ -121,7 +145,6 @@ to quickly create a Cobra application.`,
 			}
 			fmt.Println()
 		}
-
 	},
 }
 
@@ -133,6 +156,9 @@ func init() {
 
 	// Add debug flag
 	listCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
+
+	// add Project flag
+	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project")
 
 	// Here you will define your flags and configuration settings.
 

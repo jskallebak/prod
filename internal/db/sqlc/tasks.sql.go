@@ -495,15 +495,20 @@ AND (
     $2::text IS NULL 
     OR priority = $2
 )
+AND (
+    $3::text IS NULL 
+    OR project_id = $3::integer
+)
 `
 
 type ListTasksParams struct {
 	UserID   pgtype.Int4 `json:"user_id"`
 	Priority pgtype.Text `json:"priority"`
+	Project  pgtype.Text `json:"project"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
-	rows, err := q.db.Query(ctx, listTasks, arg.UserID, arg.Priority)
+	rows, err := q.db.Query(ctx, listTasks, arg.UserID, arg.Priority, arg.Project)
 	if err != nil {
 		return nil, err
 	}

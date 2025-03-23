@@ -41,6 +41,10 @@ WHERE user_id = $1
 AND (
     sqlc.narg(priority)::text IS NULL 
     OR priority = sqlc.narg(priority)
+)
+AND (
+    sqlc.narg(project)::text IS NULL 
+    OR project_id = sqlc.narg(project)::integer
 );
 
 -- name: CountTasks :one

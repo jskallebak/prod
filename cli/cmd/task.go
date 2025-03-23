@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -13,20 +12,29 @@ import (
 // taskCmd represents the task command
 var taskCmd = &cobra.Command{
 	Use:   "task",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Manage tasks",
+	Long:  `Create, list, edit, and manage tasks in the productivity app.`,
+	// This runs if 'task' is used with an unknown subcommand
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// If no args were provided, show help
+		if len(args) == 0 {
+			return cmd.Help()
+		}
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("task called")
+		// If args were provided but don't match any subcommand
+		availableCommands := []string{}
+		for _, subCmd := range cmd.Commands() {
+			availableCommands = append(availableCommands, subCmd.Name())
+		}
+
+		return fmt.Errorf("unknown command")
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(taskCmd)
+
+	taskCmd.SuggestionsMinimumDistance = 2
 
 	// Here you will define your flags and configuration settings.
 

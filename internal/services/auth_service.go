@@ -56,7 +56,7 @@ func (a AuthService) GetCurrentUser(ctx context.Context) (*sqlc.User, error) {
 
 	claim, err := auth.VerifyJWT(token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to veriry token: %w", err)
+		return nil, fmt.Errorf("failed to verify token: %w", err)
 	}
 
 	email := claim.Email

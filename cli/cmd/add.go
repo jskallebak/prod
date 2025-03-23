@@ -48,6 +48,13 @@ For example:
 		defer dbpool.Close()
 
 		taskService := services.NewTaskService(queries)
+		authService := services.NewAuthService(queries)
+
+		user, err := authService.GetCurrentUser(context.Background())
+		if err != nil {
+			fmt.Println("Need to be logged in to add task.")
+			return
+		}
 
 		// Create parameters for new task
 		params := services.TaskParams{
@@ -100,10 +107,7 @@ For example:
 			params.Notes = &taskNotes
 		}
 
-		// Create the task (using user ID 1 for now - you'd get the actual user ID from authentication)
-		//TODO: In a multi-user setup, you would get the user ID from auth context
-		userID := int64(1)
-		task, err := taskService.CreateTask(context.Background(), userID, params)
+		task, err := taskService.CreateTask(context.Background(), user.ID, params)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating task: %v\n", err)
 			return

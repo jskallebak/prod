@@ -34,7 +34,7 @@ type TaskParams struct {
 }
 
 // CreateTask creates a new task with minimal required parameters
-func (s *TaskService) CreateTask(ctx context.Context, userID int64, params TaskParams) (*sqlc.Task, error) {
+func (s *TaskService) CreateTask(ctx context.Context, userID int32, params TaskParams) (*sqlc.Task, error) {
 	// Input validation - only description is required
 	if params.Description == "" {
 		return nil, fmt.Errorf("task description cannot be empty")
@@ -139,7 +139,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int
 }
 
 // ListTasks retrieves tasks with optional filtering
-func (s *TaskService) ListTasks(ctx context.Context, userID int, priority *string, project *string) ([]sqlc.Task, error) {
+func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string) ([]sqlc.Task, error) {
 	// Create params object with userID being mandatory
 	params := sqlc.ListTasksParams{
 		UserID: pgtype.Int4{

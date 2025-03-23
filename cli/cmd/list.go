@@ -42,17 +42,20 @@ Priority levels:
   prod task list -P ProjectName`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dbpool, err := util.InitDB()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error connecting to database: %v\n", err)
+		dbpool, queries, ok := util.InitDBAndQueriesCLI()
+		if !ok {
+			return
 		}
 		defer dbpool.Close()
 
-		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
 
-		// TODO: This is a place holder for userID, when login system are made, fix this
-		userID := 1
+		authService := services.NewAuthService(queries)
+		user, err := authService.GetCurrentUser(context.Background())
+		if err != nil {
+			fmt.Println("Needs to be logged in to show tasks")
+			return
+		}
 
 		// Handle priority flag
 		var priorityPtr *string
@@ -70,7 +73,7 @@ Priority levels:
 
 		//TODO: remove when done with list.go
 		if debugMode {
-			fmt.Printf("Debug: Querying tasks for user ID: %d\n", userID)
+			fmt.Printf("Debug: Querying tasks for user ID: %d\n", user.ID)
 			if priorityPtr != nil {
 				fmt.Printf("Debug: Filtering by priority: %s\n", *priorityPtr)
 			}
@@ -81,7 +84,7 @@ Priority levels:
 			// Print SQL query test
 			countTest, err := queries.CountTasks(context.Background(), sqlc.CountTasksParams{
 				UserID: pgtype.Int4{
-					Int32: int32(userID),
+					Int32: int32(user.ID),
 					Valid: true,
 				},
 			})
@@ -93,7 +96,7 @@ Priority levels:
 			}
 		}
 
-		tasks, err := taskService.ListTasks(context.Background(), userID, priorityPtr, projectPtr)
+		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return

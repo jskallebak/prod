@@ -20,6 +20,7 @@ type Querier interface {
 	GetTaskDependencies(ctx context.Context, arg GetTaskDependenciesParams) ([]Task, error)
 	GetTasksByTag(ctx context.Context, arg GetTasksByTagParams) ([]Task, error)
 	GetTasksWithinDateRange(ctx context.Context, arg GetTasksWithinDateRangeParams) ([]Task, error)
+	GetUser(ctx context.Context, email string) (User, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error)
 	RemoveTaskDependency(ctx context.Context, arg RemoveTaskDependencyParams) error
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)

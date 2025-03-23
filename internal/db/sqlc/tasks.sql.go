@@ -472,6 +472,27 @@ func (q *Queries) GetTasksWithinDateRange(ctx context.Context, arg GetTasksWithi
 	return items, nil
 }
 
+const getUser = `-- name: GetUser :one
+SELECT id, email, password_hash, name, created_at, updated_at
+FROM users
+WHERE email = $1
+LIMIT 1
+`
+
+func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listTasks = `-- name: ListTasks :many
 SELECT 
     id, 

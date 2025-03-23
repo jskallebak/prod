@@ -4,6 +4,7 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/jskallebak/prod/internal/services"
@@ -31,8 +32,11 @@ to quickly create a Cobra application.`,
 
 		auth := services.NewAuthService(queries)
 
-		str, _ := auth.GetHash("asdf")
-		fmt.Println(str)
+		user, err := auth.Login(context.Background(), "testd@example.com", "asdf")
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(user)
 	},
 }
 

@@ -68,6 +68,49 @@ func (a AuthService) GetCurrentUser(ctx context.Context) (*sqlc.User, error) {
 	return &user, nil
 }
 
+func (a *AuthService) UpdateEmail(ctx context.Context, userID int32, newEmail string) (*sqlc.User, error) {
+	params := sqlc.UpdateUserEmailParams{
+		ID:    userID,
+		Email: newEmail,
+	}
+
+	updatedUser, err := a.queries.UpdateUserEmail(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update email in database: %w", err)
+	}
+
+	token, err := auth.GenerateJWT(updatedUser.ID, updatedUser.Email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate new token: %w", err)
+	}
+
+	err = auth.StoreToken(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to store new token: %w", err)
+	}
+
+	return &updatedUser, nil
+}
+
+func (a *AuthService) UpdatePassword(ctx context.Context, userID int32, newPassword string) (*sqlc.User, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), COST)
+	if err != nil {
+		return nil, fmt.Errorf("error generate hash from password %w", err)
+	}
+
+	params := sqlc.UpdateUserPasswordParams{
+		ID:           userID,
+		PasswordHash: string(hash),
+	}
+
+	updatedUser, err := a.queries.UpdateUserPassword(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("error updating the password in the DB: %w", err)
+	}
+
+	return &updatedUser, nil
+}
+
 func (a AuthService) GetHash(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), COST)
 	if err != nil {

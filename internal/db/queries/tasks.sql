@@ -53,6 +53,30 @@ AND (
     OR project_id = sqlc.narg(project)::integer
 );
 
+-- name: UpdateUserEmail :one
+UPDATE users
+SET 
+    email = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateUserPassword :one
+UPDATE users
+SET 
+    password_hash = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+
+
+
+
+
+
+
+
 -- name: CountTasks :one
 SELECT 
     COUNT(*) AS total_tasks,

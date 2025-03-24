@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -18,10 +19,11 @@ import (
 
 // listCmd represents the list command
 var (
-	listPriority  string
-	listProject   string
-	debugMode     bool
-	showCompleted bool
+	listPriority      string
+	listProject       string
+	listProjectSelect bool
+	debugMode         bool
+	showCompleted     bool
 )
 
 var listCmd = &cobra.Command{
@@ -51,8 +53,8 @@ Priority levels:
 		defer dbpool.Close()
 
 		taskService := services.NewTaskService(queries)
-
 		authService := services.NewAuthService(queries)
+
 		user, err := authService.GetCurrentUser(context.Background())
 		if err != nil {
 			fmt.Println("Needs to be logged in to show tasks")
@@ -69,8 +71,85 @@ Priority levels:
 
 		var projectPtr *string
 		if cmd.Flags().Changed("project") {
-			uppercaseProject := strings.ToUpper(listProject)
-			projectPtr = &uppercaseProject
+			// Project ID or name was directly provided
+			// First, try to interpret as ID
+			projectID, err := strconv.Atoi(listProject)
+			if err == nil {
+				// It's a numeric ID
+				projectIDStr := fmt.Sprintf("%d", projectID)
+				projectPtr = &projectIDStr
+			} else {
+				// It's likely a project name - search for matching project
+				projectService := services.NewProjectService(queries)
+				projects, err := projectService.ListProjects(context.Background(), user.ID)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error listing projects: %v\n", err)
+					return
+				}
+
+				// Search for project by name (case-insensitive)
+				found := false
+				searchName := strings.ToLower(listProject)
+				for _, project := range projects {
+					if strings.Contains(strings.ToLower(project.Name), searchName) {
+						projectIDStr := fmt.Sprintf("%d", project.ID)
+						projectPtr = &projectIDStr
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					fmt.Printf("No project found matching '%s'\n", listProject)
+					return
+				}
+			}
+		} else if listProjectSelect {
+			// User wants to select a project interactively
+			projectService := services.NewProjectService(queries)
+			projects, err := projectService.ListProjects(context.Background(), user.ID)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error listing projects: %v\n", err)
+				return
+			}
+
+			if len(projects) == 0 {
+				fmt.Println("No projects found. Create a project first with: prod project create \"Project Name\"")
+				return
+			}
+
+			// Display list of projects
+			fmt.Println("Available projects:")
+			// Create a map to store projects by ID for easy lookup
+			projectsById := make(map[int]sqlc.Project)
+			projectIDs := make([]int, 0, len(projects))
+
+			for _, project := range projects {
+				projectsById[int(project.ID)] = project
+				projectIDs = append(projectIDs, int(project.ID))
+			}
+
+			// Display projects with their actual IDs
+			for _, id := range projectIDs {
+				project := projectsById[id]
+				fmt.Printf("%d. %s\n", project.ID, project.Name)
+			}
+
+			// Prompt for selection
+			var selection int
+			fmt.Print("\nSelect a project by ID: ")
+			_, err = fmt.Scanln(&selection)
+
+			// Validate the selection is a valid project ID
+			_, valid := projectsById[selection]
+			if err != nil || !valid {
+				fmt.Fprintf(os.Stderr, "Invalid project ID. Please enter one of the listed project IDs\n")
+				return
+			}
+
+			// Convert to string and set as project pointer
+			selectedProject := fmt.Sprintf("%d", selection)
+			projectPtr = &selectedProject
 		}
 
 		// Status filter - by default only show pending tasks
@@ -134,6 +213,11 @@ Priority levels:
 			return
 		}
 
+		// Reverse the order of tasks (newest first)
+		for i, j := 0, len(tasks)-1; i < j; i, j = i+1, j-1 {
+			tasks[i], tasks[j] = tasks[j], tasks[i]
+		}
+
 		// Show title for the task list
 		if showCompleted {
 			fmt.Println("All tasks (including completed):")
@@ -144,7 +228,7 @@ Priority levels:
 
 		for _, task := range tasks {
 			fmt.Printf("ID: %d\n", task.ID)
-			fmt.Printf("Description: %s\n", task.Description)
+			fmt.Printf("Task: %s\n", task.Description)
 			if task.CompletedAt.Valid {
 				fmt.Printf("Completed: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
 			} else {
@@ -192,7 +276,10 @@ func init() {
 	listCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
 
 	// Add project flag
-	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project")
+	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project ID or name")
+
+	// Add project selection flag
+	listCmd.Flags().BoolVarP(&listProjectSelect, "select-project", "s", false, "Select project interactively")
 
 	// Add completed flag
 	listCmd.Flags().BoolVarP(&showCompleted, "completed", "c", false, "Show completed tasks")

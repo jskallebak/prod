@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -13,13 +12,10 @@ import (
 // habitCmd represents the habit command
 var habitCmd = &cobra.Command{
 	Use:   "habit",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Track and manage your habits and routines",
+	Long: `Create, track, and analyze habits and regular routines.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Set up habit tracking with customizable schedules, streaks, and reporting to build consistent behaviors.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("habit called")
 	},

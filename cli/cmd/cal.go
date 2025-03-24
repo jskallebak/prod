@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -13,13 +12,10 @@ import (
 // calCmd represents the cal command
 var calCmd = &cobra.Command{
 	Use:   "cal",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Manage your calendar and scheduled events",
+	Long: `Create, view, and manage calendar events and appointments.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Calendar events can be linked to projects and tasks to help with scheduling and time management.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("cal called")
 	},

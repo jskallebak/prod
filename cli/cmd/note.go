@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -13,13 +12,10 @@ import (
 // noteCmd represents the note command
 var noteCmd = &cobra.Command{
 	Use:   "note",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Manage your notes and documentation",
+	Long: `Create, edit, and organize notes for your projects and tasks.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Notes can be linked to projects and tasks to provide additional context and information.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("note called")
 	},

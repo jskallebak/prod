@@ -14,13 +14,12 @@ import (
 // logoutCmd represents the logout command
 var logoutCmd = &cobra.Command{
 	Use:   "logout",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Sign out and remove authentication token",
+	Long: `Log out of the productivity app and remove your authentication token.
+This will require you to log in again to access your tasks and data.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Example:
+  prod logout`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("logging out...")
 

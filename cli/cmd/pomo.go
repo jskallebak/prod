@@ -1,28 +1,30 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
-// pomoCmd represents the pomo command
+// pomoCmd represents the pomodoro command
 var pomoCmd = &cobra.Command{
 	Use:   "pomo",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Manage Pomodoro sessions",
+	Long: `Manage Pomodoro sessions for time management and productivity.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("pomo called")
-	},
+Available Commands:
+  start       Start a new Pomodoro session
+  stop        Stop the current Pomodoro session
+  pause       Pause the current Pomodoro session
+  resume      Resume a paused Pomodoro session
+  status      Show the status of the current Pomodoro session
+  stats       Show Pomodoro statistics
+  list        List completed Pomodoro sessions
+  report      Generate reports on Pomodoro usage
+  config      Configure Pomodoro settings
+  attach      Attach a task to the current Pomodoro session
+  detach      Remove task attachment from current Pomodoro`,
 }
 
 func init() {

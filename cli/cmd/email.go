@@ -22,13 +22,9 @@ var (
 // emailCmd represents the email command
 var emailCmd = &cobra.Command{
 	Use:   "email",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Manage email settings and notifications",
+	Long: `Configure email-related settings for your productivity system.
+Includes options for setting up notifications and managing email preferences.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("email called")
 

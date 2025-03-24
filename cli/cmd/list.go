@@ -156,7 +156,14 @@ Priority levels:
 				fmt.Println("Priority: None")
 			}
 			if task.ProjectID.Valid {
-				fmt.Printf("Project: %v\n", task.ProjectID.Int32)
+				// Get project name instead of just showing the ID
+				projectService := services.NewProjectService(queries)
+				project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, user.ID)
+				if err == nil && project != nil {
+					fmt.Printf("Project: %s (ID: %d)\n", project.Name, task.ProjectID.Int32)
+				} else {
+					fmt.Printf("Project: ID %d\n", task.ProjectID.Int32)
+				}
 			} else {
 				fmt.Println("Project: None")
 			}

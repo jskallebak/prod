@@ -12,14 +12,21 @@ import (
 
 type Querier interface {
 	AddTaskDependency(ctx context.Context, arg AddTaskDependencyParams) error
+	AttachTaskToPomodoro(ctx context.Context, arg AttachTaskToPomodoroParams) (PomodoroSession, error)
 	CompleteTask(ctx context.Context, arg CompleteTaskParams) (Task, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (CountTasksRow, error)
+	CreatePomodoroSession(ctx context.Context, arg CreatePomodoroSessionParams) (PomodoroSession, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
 	DeleteTask(ctx context.Context, arg DeleteTaskParams) error
+	DetachTaskFromPomodoro(ctx context.Context, arg DetachTaskFromPomodoroParams) (PomodoroSession, error)
+	GetActivePomodoroSession(ctx context.Context, userID pgtype.Int4) (PomodoroSession, error)
 	GetDependentTasks(ctx context.Context, arg GetDependentTasksParams) ([]Task, error)
+	GetPomodoroConfig(ctx context.Context, userID int32) (PomodoroConfig, error)
+	GetPomodoroSession(ctx context.Context, arg GetPomodoroSessionParams) (PomodoroSession, error)
+	GetPomodoroStats(ctx context.Context, arg GetPomodoroStatsParams) (GetPomodoroStatsRow, error)
 	GetProject(ctx context.Context, arg GetProjectParams) (Project, error)
 	GetProjectTasks(ctx context.Context, arg GetProjectTasksParams) ([]Task, error)
 	GetRecentlyCompletedTasks(ctx context.Context, arg GetRecentlyCompletedTasksParams) ([]Task, error)
@@ -28,15 +35,20 @@ type Querier interface {
 	GetTasksByTag(ctx context.Context, arg GetTasksByTagParams) ([]Task, error)
 	GetTasksWithinDateRange(ctx context.Context, arg GetTasksWithinDateRangeParams) ([]Task, error)
 	GetUser(ctx context.Context, email string) (User, error)
+	ListPomodoroSessions(ctx context.Context, arg ListPomodoroSessionsParams) ([]PomodoroSession, error)
 	ListProjects(ctx context.Context, userID pgtype.Int4) ([]Project, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error)
+	PausePomodoroSession(ctx context.Context, arg PausePomodoroSessionParams) (PomodoroSession, error)
 	RemoveTaskDependency(ctx context.Context, arg RemoveTaskDependencyParams) error
 	RemoveTaskFromProject(ctx context.Context, arg RemoveTaskFromProjectParams) (Task, error)
+	ResumePomodoroSession(ctx context.Context, arg ResumePomodoroSessionParams) (PomodoroSession, error)
+	StopPomodoroSession(ctx context.Context, arg StopPomodoroSessionParams) (PomodoroSession, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error)
 	UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) (User, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (User, error)
+	UpsertPomodoroConfig(ctx context.Context, arg UpsertPomodoroConfigParams) (PomodoroConfig, error)
 }
 
 var _ Querier = (*Queries)(nil)

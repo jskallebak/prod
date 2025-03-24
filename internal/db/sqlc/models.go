@@ -5,6 +5,8 @@
 package sqlc
 
 import (
+	"time"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -77,6 +79,18 @@ type Note struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PomodoroConfig struct {
+	UserID             int32     `json:"user_id"`
+	WorkDuration       int32     `json:"work_duration"`
+	BreakDuration      int32     `json:"break_duration"`
+	LongBreakDuration  int32     `json:"long_break_duration"`
+	LongBreakInterval  int32     `json:"long_break_interval"`
+	AutoStartBreaks    bool      `json:"auto_start_breaks"`
+	AutoStartPomodoros bool      `json:"auto_start_pomodoros"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
 type PomodoroPause struct {
 	ID         int32              `json:"id"`
 	SessionID  pgtype.Int4        `json:"session_id"`
@@ -86,14 +100,21 @@ type PomodoroPause struct {
 }
 
 type PomodoroSession struct {
-	ID        int32              `json:"id"`
-	UserID    pgtype.Int4        `json:"user_id"`
-	TaskID    pgtype.Int4        `json:"task_id"`
-	StartTime pgtype.Timestamptz `json:"start_time"`
-	EndTime   pgtype.Timestamptz `json:"end_time"`
-	Duration  int32              `json:"duration"`
-	Completed pgtype.Bool        `json:"completed"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID                 int32              `json:"id"`
+	UserID             pgtype.Int4        `json:"user_id"`
+	TaskID             pgtype.Int4        `json:"task_id"`
+	StartTime          pgtype.Timestamptz `json:"start_time"`
+	EndTime            pgtype.Timestamptz `json:"end_time"`
+	Duration           int32              `json:"duration"`
+	Completed          pgtype.Bool        `json:"completed"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	Status             string             `json:"status"`
+	WorkDuration       int32              `json:"work_duration"`
+	BreakDuration      int32              `json:"break_duration"`
+	PauseTime          pgtype.Timestamptz `json:"pause_time"`
+	TotalPauseDuration pgtype.Int4        `json:"total_pause_duration"`
+	ActualWorkDuration pgtype.Int4        `json:"actual_work_duration"`
+	Note               pgtype.Text        `json:"note"`
 }
 
 type Project struct {

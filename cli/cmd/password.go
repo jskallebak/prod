@@ -23,13 +23,12 @@ var (
 // passwordCmd represents the password command
 var passwordCmd = &cobra.Command{
 	Use:   "password",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Change or reset your account password",
+	Long: `Update your current password or request a password reset.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Examples:
+  prod password change   # Change your current password
+  prod password reset    # Request a password reset email`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Initialize DB and services
 		dbpool, queries, ok := util.InitDBAndQueriesCLI()

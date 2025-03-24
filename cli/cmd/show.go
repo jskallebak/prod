@@ -40,6 +40,7 @@ For example:
 		// Create queries and service
 		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
+		projectService := services.NewProjectService(queries)
 
 		// Currently using a hardcoded user ID (1)
 		// In a real app, you would get this from authentication
@@ -78,7 +79,13 @@ For example:
 		}
 
 		if task.ProjectID.Valid {
-			fmt.Printf("Project ID: %d\n", task.ProjectID.Int32)
+			// Get project name instead of just showing the ID
+			project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, userID)
+			if err == nil && project != nil {
+				fmt.Printf("Project: %s (ID: %d)\n", project.Name, task.ProjectID.Int32)
+			} else {
+				fmt.Printf("Project ID: %d\n", task.ProjectID.Int32)
+			}
 		}
 
 		if task.Recurrence.Valid {

@@ -13,6 +13,7 @@ type Querier interface {
 	CompleteTask(ctx context.Context, arg CompleteTaskParams) (Task, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (CountTasksRow, error)
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteTask(ctx context.Context, arg DeleteTaskParams) error
 	GetDependentTasks(ctx context.Context, arg GetDependentTasksParams) ([]Task, error)
 	GetRecentlyCompletedTasks(ctx context.Context, arg GetRecentlyCompletedTasksParams) ([]Task, error)

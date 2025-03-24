@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -13,15 +12,16 @@ import (
 // userCmd represents the user command
 var userCmd = &cobra.Command{
 	Use:   "user",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Manage user accounts",
+	Long: `Manage user accounts in the productivity system.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+This command allows you to create and manage user accounts, including:
+- Creating new users
+- Updating user information
+- Changing passwords
+- Managing authentication`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("user called")
+		fmt.Println("Use one of the user subcommands. Try 'prod user --help' for more information.")
 	},
 }
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
@@ -41,20 +42,16 @@ For example:
 		description := strings.Join(args, " ")
 
 		// Initialize DB connection
-		dbpool, queries, ok := util.InitDBAndQueriesCLI()
-		if !ok {
-			return
+		dbpool, err := util.InitDB()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error connecting to database: %v\n", err)
+			os.Exit(1)
 		}
 		defer dbpool.Close()
 
+		// Create queries and service
+		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
-		authService := services.NewAuthService(queries)
-
-		user, err := authService.GetCurrentUser(context.Background())
-		if err != nil {
-			fmt.Println("Need to be logged in to add task.")
-			return
-		}
 
 		// Create parameters for new task
 		params := services.TaskParams{
@@ -91,14 +88,12 @@ For example:
 
 		// Add priority if provided
 		if cmd.Flags().Changed("priority") {
-			// Convert priority to uppercase for case-insensitive matching
-			uppercasePriority := strings.ToUpper(taskPriority)
-			params.Priority = &uppercasePriority
+			params.Priority = &taskPriority
 		}
 
 		// Add project ID if provided
 		if cmd.Flags().Changed("project") && taskProjectID > 0 {
-			projectID := int64(taskProjectID)
+			projectID := int32(taskProjectID)
 			params.ProjectID = &projectID
 		}
 
@@ -107,7 +102,10 @@ For example:
 			params.Notes = &taskNotes
 		}
 
-		task, err := taskService.CreateTask(context.Background(), user.ID, params)
+		// Create the task (using user ID 1 for now - you'd get the actual user ID from authentication)
+		//TODO: In a multi-user setup, you would get the user ID from auth context
+		userID := int32(1)
+		task, err := taskService.CreateTask(context.Background(), userID, params)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating task: %v\n", err)
 			return

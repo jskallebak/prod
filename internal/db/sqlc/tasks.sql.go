@@ -183,6 +183,36 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 	return i, err
 }
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (
+    email,
+    password_hash,
+    name
+) VALUES (
+    $1, $2, $3
+) RETURNING id, email, password_hash, name, created_at, updated_at
+`
+
+type CreateUserParams struct {
+	Email        string      `json:"email"`
+	PasswordHash string      `json:"password_hash"`
+	Name         pgtype.Text `json:"name"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.PasswordHash, arg.Name)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteTask = `-- name: DeleteTask :exec
 DELETE FROM tasks
 WHERE id = $1 AND user_id = $2

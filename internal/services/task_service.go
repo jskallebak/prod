@@ -27,7 +27,7 @@ type TaskParams struct {
 	Priority    *string
 	DueDate     *time.Time
 	StartDate   *time.Time
-	ProjectID   *int64
+	ProjectID   *int32
 	Tags        []string
 	Notes       *string
 	Recurrence  *string
@@ -46,7 +46,7 @@ func (s *TaskService) CreateTask(ctx context.Context, userID int32, params TaskP
 	// Convert Go types to pgtype types
 	createParams := sqlc.CreateTaskParams{
 		UserID: pgtype.Int4{
-			Int32: int32(userID),
+			Int32: userID,
 			Valid: true,
 		},
 		Description: params.Description,
@@ -78,7 +78,7 @@ func (s *TaskService) CreateTask(ctx context.Context, userID int32, params TaskP
 
 	if params.ProjectID != nil {
 		createParams.ProjectID = pgtype.Int4{
-			Int32: int32(*params.ProjectID),
+			Int32: *params.ProjectID,
 			Valid: true,
 		}
 	}
@@ -107,11 +107,11 @@ func (s *TaskService) CreateTask(ctx context.Context, userID int32, params TaskP
 }
 
 // GetTask retrieves a task by ID
-func (s *TaskService) GetTask(ctx context.Context, taskID int32, userID int64) (*sqlc.Task, error) {
+func (s *TaskService) GetTask(ctx context.Context, taskID int32, userID int32) (*sqlc.Task, error) {
 	task, err := s.queries.GetTask(ctx, sqlc.GetTaskParams{
 		ID: taskID,
 		UserID: pgtype.Int4{
-			Int32: int32(userID),
+			Int32: userID,
 			Valid: true,
 		},
 	})
@@ -123,11 +123,11 @@ func (s *TaskService) GetTask(ctx context.Context, taskID int32, userID int64) (
 }
 
 // CompleteTask marks a task as completed
-func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int64) (*sqlc.Task, error) {
+func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int32) (*sqlc.Task, error) {
 	task, err := s.queries.CompleteTask(ctx, sqlc.CompleteTaskParams{
 		ID: taskID,
 		UserID: pgtype.Int4{
-			Int32: int32(userID),
+			Int32: userID,
 			Valid: true,
 		},
 	})
@@ -143,7 +143,7 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 	// Create params object with userID being mandatory
 	params := sqlc.ListTasksParams{
 		UserID: pgtype.Int4{
-			Int32: int32(userID),
+			Int32: userID,
 			Valid: true,
 		},
 	}
@@ -172,11 +172,11 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 }
 
 // DeleteTask removes a task
-func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int64) error {
+func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int32) error {
 	err := s.queries.DeleteTask(ctx, sqlc.DeleteTaskParams{
 		ID: taskID,
 		UserID: pgtype.Int4{
-			Int32: int32(userID),
+			Int32: userID,
 			Valid: true,
 		},
 	})

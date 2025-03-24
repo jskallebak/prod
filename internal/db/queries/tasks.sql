@@ -14,12 +14,6 @@ INSERT INTO tasks (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 ) RETURNING *;
 
--- name: GetUser :one
-SELECT *
-FROM users
-WHERE email = $1
-LIMIT 1;
-
 -- name: GetTask :one
 SELECT * FROM tasks
 WHERE id = $1 AND user_id = $2
@@ -51,31 +45,11 @@ AND (
 AND (
     sqlc.narg(project)::text IS NULL 
     OR project_id = sqlc.narg(project)::integer
+)
+AND (
+    sqlc.narg(status)::text IS NULL 
+    OR status = sqlc.narg(status)
 );
-
--- name: UpdateUserEmail :one
-UPDATE users
-SET 
-    email = $2,
-    updated_at = NOW()
-WHERE id = $1
-RETURNING *;
-
--- name: UpdateUserPassword :one
-UPDATE users
-SET 
-    password_hash = $2,
-    updated_at = NOW()
-WHERE id = $1
-RETURNING *;
-
-
-
-
-
-
-
-
 
 -- name: CountTasks :one
 SELECT 

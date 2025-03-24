@@ -6,24 +6,33 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	AddTaskDependency(ctx context.Context, arg AddTaskDependencyParams) error
 	CompleteTask(ctx context.Context, arg CompleteTaskParams) (Task, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (CountTasksRow, error)
+	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
 	DeleteTask(ctx context.Context, arg DeleteTaskParams) error
 	GetDependentTasks(ctx context.Context, arg GetDependentTasksParams) ([]Task, error)
+	GetProject(ctx context.Context, arg GetProjectParams) (Project, error)
+	GetProjectTasks(ctx context.Context, arg GetProjectTasksParams) ([]Task, error)
 	GetRecentlyCompletedTasks(ctx context.Context, arg GetRecentlyCompletedTasksParams) ([]Task, error)
 	GetTask(ctx context.Context, arg GetTaskParams) (Task, error)
 	GetTaskDependencies(ctx context.Context, arg GetTaskDependenciesParams) ([]Task, error)
 	GetTasksByTag(ctx context.Context, arg GetTasksByTagParams) ([]Task, error)
 	GetTasksWithinDateRange(ctx context.Context, arg GetTasksWithinDateRangeParams) ([]Task, error)
 	GetUser(ctx context.Context, email string) (User, error)
+	ListProjects(ctx context.Context, userID pgtype.Int4) ([]Project, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error)
 	RemoveTaskDependency(ctx context.Context, arg RemoveTaskDependencyParams) error
+	RemoveTaskFromProject(ctx context.Context, arg RemoveTaskFromProjectParams) (Task, error)
+	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error)
 	UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) (User, error)

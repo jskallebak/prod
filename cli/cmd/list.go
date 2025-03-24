@@ -18,9 +18,10 @@ import (
 
 // listCmd represents the list command
 var (
-	listPriority string
-	listProject  string
-	debugMode    bool
+	listPriority  string
+	listProject   string
+	debugMode     bool
+	showCompleted bool
 )
 
 var listCmd = &cobra.Command{
@@ -29,7 +30,8 @@ var listCmd = &cobra.Command{
 	Long: `List all your tasks or filter them by priority.
 
 Examples:
-  prod task list                 # List all tasks
+  prod task list                 # List all incomplete tasks
+  prod task list --completed     # List all tasks including completed ones
   prod task list --priority=H    # List only high priority tasks
   prod task list -p M            # List only medium priority tasks
   
@@ -71,11 +73,21 @@ Priority levels:
 			projectPtr = &uppercaseProject
 		}
 
+		// Status filter - by default only show pending tasks
+		var statusPtr *string
+		if !showCompleted {
+			status := "pending"
+			statusPtr = &status
+		}
+
 		//TODO: remove when done with list.go
 		if debugMode {
 			fmt.Printf("Debug: Querying tasks for user ID: %d\n", user.ID)
 			if priorityPtr != nil {
 				fmt.Printf("Debug: Filtering by priority: %s\n", *priorityPtr)
+			}
+			if statusPtr != nil {
+				fmt.Printf("Debug: Filtering by status: %s\n", *statusPtr)
 			}
 
 			// Print DB connection info
@@ -96,7 +108,7 @@ Priority levels:
 			}
 		}
 
-		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr)
+		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, statusPtr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return
@@ -111,12 +123,24 @@ Priority levels:
 				fmt.Printf("No tasks found with priority '%s'\n", listPriority)
 			} else if cmd.Flags().Changed("project") {
 				fmt.Printf("No tasks found with project '%s'\n", listProject)
+			} else if !showCompleted {
+				fmt.Println("No pending tasks found")
+				fmt.Println("\nTip: Create a task with: prod task add \"My first task\"")
+				fmt.Println("     To see completed tasks, use: prod task list --completed")
 			} else {
 				fmt.Println("No tasks found")
 				fmt.Println("\nTip: Create a task with: prod task add \"My first task\"")
 			}
 			return
 		}
+
+		// Show title for the task list
+		if showCompleted {
+			fmt.Println("All tasks (including completed):")
+		} else {
+			fmt.Println("Pending tasks:")
+		}
+		fmt.Println()
 
 		for _, task := range tasks {
 			fmt.Printf("ID: %d\n", task.ID)
@@ -160,8 +184,11 @@ func init() {
 	// Add debug flag
 	listCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
 
-	// add Project flag
+	// Add project flag
 	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project")
+
+	// Add completed flag
+	listCmd.Flags().BoolVarP(&showCompleted, "completed", "c", false, "Show completed tasks")
 
 	// Here you will define your flags and configuration settings.
 

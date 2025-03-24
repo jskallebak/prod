@@ -1,28 +1,25 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
 // projectCmd represents the project command
 var projectCmd = &cobra.Command{
 	Use:   "project",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Manage projects",
+	Long: `Manage projects for organizing related tasks.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("project called")
-	},
+Available Commands:
+  create      Create a new project
+  list        List all projects
+  show        Show project details
+  edit        Edit project details
+  delete      Delete a project
+  task        Manage tasks within a project`,
 }
 
 func init() {

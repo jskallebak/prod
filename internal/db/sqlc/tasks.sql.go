@@ -183,36 +183,6 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 	return i, err
 }
 
-const createUser = `-- name: CreateUser :one
-INSERT INTO users (
-    email,
-    password_hash,
-    name
-) VALUES (
-    $1, $2, $3
-) RETURNING id, email, password_hash, name, created_at, updated_at
-`
-
-type CreateUserParams struct {
-	Email        string      `json:"email"`
-	PasswordHash string      `json:"password_hash"`
-	Name         pgtype.Text `json:"name"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.PasswordHash, arg.Name)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const deleteTask = `-- name: DeleteTask :exec
 DELETE FROM tasks
 WHERE id = $1 AND user_id = $2
@@ -502,27 +472,6 @@ func (q *Queries) GetTasksWithinDateRange(ctx context.Context, arg GetTasksWithi
 	return items, nil
 }
 
-const getUser = `-- name: GetUser :one
-SELECT id, email, password_hash, name, created_at, updated_at
-FROM users
-WHERE email = $1
-LIMIT 1
-`
-
-func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const listTasks = `-- name: ListTasks :many
 SELECT 
     id, 
@@ -550,16 +499,26 @@ AND (
     $3::text IS NULL 
     OR project_id = $3::integer
 )
+AND (
+    $4::text IS NULL 
+    OR status = $4
+)
 `
 
 type ListTasksParams struct {
 	UserID   pgtype.Int4 `json:"user_id"`
 	Priority pgtype.Text `json:"priority"`
 	Project  pgtype.Text `json:"project"`
+	Status   pgtype.Text `json:"status"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
-	rows, err := q.db.Query(ctx, listTasks, arg.UserID, arg.Priority, arg.Project)
+	rows, err := q.db.Query(ctx, listTasks,
+		arg.UserID,
+		arg.Priority,
+		arg.Project,
+		arg.Status,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -708,62 +667,6 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		&i.Recurrence,
 		&i.Tags,
 		&i.Notes,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateUserEmail = `-- name: UpdateUserEmail :one
-UPDATE users
-SET 
-    email = $2,
-    updated_at = NOW()
-WHERE id = $1
-RETURNING id, email, password_hash, name, created_at, updated_at
-`
-
-type UpdateUserEmailParams struct {
-	ID    int32  `json:"id"`
-	Email string `json:"email"`
-}
-
-func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUserEmail, arg.ID, arg.Email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateUserPassword = `-- name: UpdateUserPassword :one
-UPDATE users
-SET 
-    password_hash = $2,
-    updated_at = NOW()
-WHERE id = $1
-RETURNING id, email, password_hash, name, created_at, updated_at
-`
-
-type UpdateUserPasswordParams struct {
-	ID           int32  `json:"id"`
-	PasswordHash string `json:"password_hash"`
-}
-
-func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

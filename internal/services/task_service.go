@@ -139,7 +139,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int
 }
 
 // ListTasks retrieves tasks with optional filtering
-func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string) ([]sqlc.Task, error) {
+func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string, status *string) ([]sqlc.Task, error) {
 	// Create params object with userID being mandatory
 	params := sqlc.ListTasksParams{
 		UserID: pgtype.Int4{
@@ -160,6 +160,14 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 	if project != nil {
 		params.Project = pgtype.Text{
 			String: *project,
+			Valid:  true,
+		}
+	}
+
+	// Add status if provided
+	if status != nil {
+		params.Status = pgtype.Text{
+			String: *status,
 			Valid:  true,
 		}
 	}

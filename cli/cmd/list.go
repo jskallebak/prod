@@ -72,7 +72,6 @@ Priority levels:
 		if cmd.Flags().Changed("priority") {
 			// Convert priority to uppercase for case-insensitive matching
 			uppercasePriority := strings.ToUpper(listPriority)
-			fmt.Printf("Debug: Priority: %s\n", uppercasePriority)
 			priorityPtr = &uppercasePriority
 		}
 
@@ -82,7 +81,7 @@ Priority levels:
 			projectPtr = &uppercaseProject
 		}
 
-		// Status filter - by default only show pending tasks
+		// Status filter - by default only show pending and active tasks
 		var statusPtr *string
 		if !showCompleted {
 			status := "pending"
@@ -161,6 +160,7 @@ Priority levels:
 			fmt.Printf("%s #%d %s\n", status, task.ID, coloredDescription)
 
 			// Show task details with emojis and consistent formatting
+			fmt.Printf("    🎯\tStatus: %s\n", task.Status) // Target/goal
 			if task.CompletedAt.Valid {
 				fmt.Printf("    ✅\tCompleted: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
 			}
@@ -169,11 +169,11 @@ Priority levels:
 				priorityName := "Unknown"
 				switch task.Priority.String {
 				case "H":
-					priorityName = "High"
+					priorityName = ColorRed + "High" + ColorReset
 				case "M":
-					priorityName = "Medium"
+					priorityName = ColorYellow + "Medium" + ColorReset
 				case "L":
-					priorityName = "Low"
+					priorityName = ColorGreen + "Low" + ColorReset
 				}
 				fmt.Printf("    🔄\tPriority: %s\n", priorityName)
 			} else {
@@ -191,16 +191,22 @@ Priority levels:
 			} else {
 				fmt.Printf("    📁\tProject: --\n")
 			}
+			if task.StartDate.Valid {
+				fmt.Printf("    📅\tStarted at: %s\n", task.StartDate.Time.Format("Mon, Jan 2, 2006"))
+			} else {
+				fmt.Printf("    📅\tStarted at: --\n")
+			}
 			if task.DueDate.Valid {
 				fmt.Printf("    📅\tDue: %s\n", task.DueDate.Time.Format("Mon, Jan 2, 2006"))
 			} else {
 				fmt.Printf("    📅\tDue: --\n")
 			}
-			if len(task.Tags) > 0 {
-				fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
-			} else {
-				fmt.Printf("    🏷️\tTags: --\n")
-			}
+			// if len(task.Tags) > 0 {
+			// 	fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
+			// } else {
+			// 	fmt.Printf("    🏷️\tTags: --\n")
+			// }
+
 			fmt.Println()
 		}
 	},

@@ -23,6 +23,7 @@ var (
 	editTags      []string
 	editNotes     string
 	editDesc      string
+	editStatus    string
 )
 
 // editCmd represents the edit command
@@ -33,7 +34,17 @@ var editCmd = &cobra.Command{
 	
 For example:
   prod task edit 5 --desc="Updated task description"
-  prod task edit 5 --priority=H --due=2025-04-01 --project=2 --tags=work,urgent --notes="Important update"`,
+  prod task edit 5 --priority=H --due=2025-04-01 --project=2 --tags=work,urgent --notes="Important update"
+  prod task edit 5 --status=completed
+
+Available flags:
+  --desc        Update task description
+  --priority    Set priority (H/M/L)
+  --due         Set due date (YYYY-MM-DD)
+  --project     Set project ID
+  --tags        Set tags (comma separated)
+  --notes       Set additional notes
+  --status      Set status (pending/completed)`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse task ID from arguments
@@ -125,6 +136,9 @@ For example:
 			}
 		}
 
+		if cmd.Flags().Changed("status") {
+			updateParams.Status = editStatus
+		}
 		// Call the service to update the task
 		updatedTask, err := queries.UpdateTask(context.Background(), updateParams)
 		if err != nil {
@@ -159,4 +173,5 @@ func init() {
 	editCmd.Flags().IntVarP(&editProjectID, "project", "P", 0, "Project ID")
 	editCmd.Flags().StringSliceVarP(&editTags, "tags", "t", []string{}, "Task tags (comma-separated)")
 	editCmd.Flags().StringVar(&editNotes, "notes", "", "Additional notes for the task")
+	editCmd.Flags().StringVarP(&editStatus, "status", "s", "", "Task status (pending, active, completed, archived)")
 }

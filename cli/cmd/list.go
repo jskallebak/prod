@@ -7,9 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jskallebak/prod/internal/db/sqlc"
@@ -18,13 +16,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	ColorBlue   = "\033[34m"
+	ColorGreen  = "\033[32m"
+	ColorYellow = "\033[33m"
+	ColorRed    = "\033[31m"
+	ColorReset  = "\033[0m"
+)
+
 // listCmd represents the list command
 var (
-	listPriority      string
-	listProject       string
-	listProjectSelect bool
-	debugMode         bool
-	showCompleted     bool
+	listPriority  string
+	listProject   string
+	debugMode     bool
+	showCompleted bool
 )
 
 var listCmd = &cobra.Command{
@@ -54,8 +59,8 @@ Priority levels:
 		defer dbpool.Close()
 
 		taskService := services.NewTaskService(queries)
-		authService := services.NewAuthService(queries)
 
+		authService := services.NewAuthService(queries)
 		user, err := authService.GetCurrentUser(context.Background())
 		if err != nil {
 			fmt.Println("Needs to be logged in to show tasks")
@@ -72,85 +77,8 @@ Priority levels:
 
 		var projectPtr *string
 		if cmd.Flags().Changed("project") {
-			// Project ID or name was directly provided
-			// First, try to interpret as ID
-			projectID, err := strconv.Atoi(listProject)
-			if err == nil {
-				// It's a numeric ID
-				projectIDStr := fmt.Sprintf("%d", projectID)
-				projectPtr = &projectIDStr
-			} else {
-				// It's likely a project name - search for matching project
-				projectService := services.NewProjectService(queries)
-				projects, err := projectService.ListProjects(context.Background(), user.ID)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error listing projects: %v\n", err)
-					return
-				}
-
-				// Search for project by name (case-insensitive)
-				found := false
-				searchName := strings.ToLower(listProject)
-				for _, project := range projects {
-					if strings.Contains(strings.ToLower(project.Name), searchName) {
-						projectIDStr := fmt.Sprintf("%d", project.ID)
-						projectPtr = &projectIDStr
-						found = true
-						break
-					}
-				}
-
-				if !found {
-					fmt.Printf("No project found matching '%s'\n", listProject)
-					return
-				}
-			}
-		} else if listProjectSelect {
-			// User wants to select a project interactively
-			projectService := services.NewProjectService(queries)
-			projects, err := projectService.ListProjects(context.Background(), user.ID)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error listing projects: %v\n", err)
-				return
-			}
-
-			if len(projects) == 0 {
-				fmt.Println("No projects found. Create a project first with: prod project create \"Project Name\"")
-				return
-			}
-
-			// Display list of projects
-			fmt.Println("Available projects:")
-			// Create a map to store projects by ID for easy lookup
-			projectsById := make(map[int]sqlc.Project)
-			projectIDs := make([]int, 0, len(projects))
-
-			for _, project := range projects {
-				projectsById[int(project.ID)] = project
-				projectIDs = append(projectIDs, int(project.ID))
-			}
-
-			// Display projects with their actual IDs
-			for _, id := range projectIDs {
-				project := projectsById[id]
-				fmt.Printf("%d. %s\n", project.ID, project.Name)
-			}
-
-			// Prompt for selection
-			var selection int
-			fmt.Print("\nSelect a project by ID: ")
-			_, err = fmt.Scanln(&selection)
-
-			// Validate the selection is a valid project ID
-			_, valid := projectsById[selection]
-			if err != nil || !valid {
-				fmt.Fprintf(os.Stderr, "Invalid project ID. Please enter one of the listed project IDs\n")
-				return
-			}
-
-			// Convert to string and set as project pointer
-			selectedProject := fmt.Sprintf("%d", selection)
-			projectPtr = &selectedProject
+			uppercaseProject := strings.ToUpper(listProject)
+			projectPtr = &uppercaseProject
 		}
 
 		// Status filter - by default only show pending tasks
@@ -214,78 +142,66 @@ Priority levels:
 			return
 		}
 
-		// Reverse the order of tasks (newest first)
-		for i, j := 0, len(tasks)-1; i < j; i, j = i+1, j-1 {
-			tasks[i], tasks[j] = tasks[j], tasks[i]
-		}
-
 		// Show title for the task list
 		if showCompleted {
-			fmt.Println("🗒️  All tasks (including completed):")
+			fmt.Println("All tasks (including completed):")
 		} else {
-			fmt.Println("🗒️  Pending tasks:")
+			fmt.Println("Pending tasks:")
 		}
-		fmt.Println("----------------------------------------------")
+		fmt.Println()
 
-		for i, task := range tasks {
-			// Create status indicator
-			statusSymbol := "[ ]"
+		for _, task := range tasks {
+			// Show task status with checkbox
+			status := "[ ]"
 			if task.CompletedAt.Valid {
-				statusSymbol = "[✓]"
+				status = "[✓]"
 			}
+			coloredDescription := fmt.Sprintf("%s%s%s", ColorGreen, task.Description, ColorReset)
+			fmt.Printf("%s #%d %s\n", status, task.ID, coloredDescription)
 
-			// Print task header with ID and status (without priority)
-			fmt.Printf("%s #%d %s\n", statusSymbol, task.ID, task.Description)
-
-			// Print priority on a new line, showing "None" if not set
-			if task.Priority.Valid {
-				fmt.Printf("    🔄\tPriority: %s\n", task.Priority.String)
-			} else {
-				fmt.Printf("    🔄\tPriority: None\n")
-			}
-
-			// Print metadata indented
+			// Show task details with emojis and consistent formatting
 			if task.CompletedAt.Valid {
 				fmt.Printf("    ✅\tCompleted: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
 			}
-
-			// Print project info, showing "None" if not set
+			if task.Priority.Valid {
+				// Convert priority letter to full name
+				priorityName := "Unknown"
+				switch task.Priority.String {
+				case "H":
+					priorityName = "High"
+				case "M":
+					priorityName = "Medium"
+				case "L":
+					priorityName = "Low"
+				}
+				fmt.Printf("    🔄\tPriority: %s\n", priorityName)
+			} else {
+				fmt.Printf("    🔄\tPriority: --\n")
+			}
 			if task.ProjectID.Valid {
+				// Get project name instead of just showing the ID
 				projectService := services.NewProjectService(queries)
 				project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, user.ID)
 				if err == nil && project != nil {
 					fmt.Printf("    📁\tProject: %s\n", project.Name)
 				} else {
-					fmt.Printf("    📁\tProject ID: %d\n", task.ProjectID.Int32)
+					fmt.Printf("    📁\tProject: ID %d\n", task.ProjectID.Int32)
 				}
 			} else {
-				fmt.Printf("    📁\tProject: None\n")
+				fmt.Printf("    📁\tProject: --\n")
 			}
-
-			// Print due date if exists, or "None" if not set
 			if task.DueDate.Valid {
-				// Calculate if the task is overdue
-				dueStatus := ""
-				if task.DueDate.Time.Before(time.Now()) && !task.CompletedAt.Valid {
-					dueStatus = " (OVERDUE)"
-				}
-				fmt.Printf("    📅\tDue: %s%s\n", task.DueDate.Time.Format("Mon, Jan 2, 2006"), dueStatus)
+				fmt.Printf("    📅\tDue: %s\n", task.DueDate.Time.Format("Mon, Jan 2, 2006"))
 			} else {
-				fmt.Printf("    📅\tDue: None\n")
+				fmt.Printf("    📅\tDue: --\n")
 			}
-
-			// Print tags if exists
 			if len(task.Tags) > 0 {
 				fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
+			} else {
+				fmt.Printf("    🏷️\tTags: --\n")
 			}
-
-			// Add separator between tasks, except after the last one
-			if i < len(tasks)-1 {
-				fmt.Println("----------------------------------------------")
-			}
+			fmt.Println()
 		}
-		fmt.Println("----------------------------------------------")
-		fmt.Printf("Total: %d tasks\n", len(tasks))
 	},
 }
 
@@ -299,10 +215,7 @@ func init() {
 	listCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
 
 	// Add project flag
-	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project ID or name")
-
-	// Add project selection flag
-	listCmd.Flags().BoolVarP(&listProjectSelect, "select-project", "s", false, "Select project interactively")
+	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project")
 
 	// Add completed flag
 	listCmd.Flags().BoolVarP(&showCompleted, "completed", "c", false, "Show completed tasks")

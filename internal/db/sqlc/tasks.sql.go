@@ -500,16 +500,22 @@ AND (
     OR project_id = $3::integer
 )
 AND (
-    $4::text IS NULL 
-    OR status = $4
+    $4::text[] IS NULL
+    OR status = ANY($4)
 )
+ORDER BY
+    CASE 
+        WHEN status = 'completed' THEN 0 
+        ELSE 1 
+    END,
+    COALESCE(id) ASC
 `
 
 type ListTasksParams struct {
 	UserID   pgtype.Int4 `json:"user_id"`
 	Priority pgtype.Text `json:"priority"`
 	Project  pgtype.Text `json:"project"`
-	Status   pgtype.Text `json:"status"`
+	Status   []string    `json:"status"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {

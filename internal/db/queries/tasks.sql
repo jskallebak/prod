@@ -47,9 +47,15 @@ AND (
     OR project_id = sqlc.narg(project)::integer
 )
 AND (
-    sqlc.narg(status)::text IS NULL 
-    OR status = sqlc.narg(status)
-);
+    sqlc.narg('status')::text[] IS NULL
+    OR status = ANY(sqlc.narg('status'))
+)
+ORDER BY
+    CASE 
+        WHEN status = 'completed' THEN 0 
+        ELSE 1 
+    END,
+    COALESCE(id) ASC;
 
 -- name: CountTasks :one
 SELECT 

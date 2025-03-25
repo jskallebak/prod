@@ -82,10 +82,9 @@ Priority levels:
 		}
 
 		// Status filter - by default only show pending and active tasks
-		var statusPtr *string
+		var status []string
 		if !showCompleted {
-			status := "pending"
-			statusPtr = &status
+			status = []string{"pending", "active"}
 		}
 
 		//TODO: remove when done with list.go
@@ -94,8 +93,8 @@ Priority levels:
 			if priorityPtr != nil {
 				fmt.Printf("Debug: Filtering by priority: %s\n", *priorityPtr)
 			}
-			if statusPtr != nil {
-				fmt.Printf("Debug: Filtering by status: %s\n", *statusPtr)
+			if len(status) > 0 {
+				fmt.Printf("Debug: Filtering by status: %s\n", status)
 			}
 
 			// Print DB connection info
@@ -116,7 +115,7 @@ Priority levels:
 			}
 		}
 
-		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, statusPtr)
+		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, status)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return

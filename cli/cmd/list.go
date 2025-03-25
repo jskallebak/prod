@@ -201,11 +201,11 @@ Priority levels:
 			} else {
 				fmt.Printf("    📅\tDue: --\n")
 			}
-			// if len(task.Tags) > 0 {
-			// 	fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
-			// } else {
-			// 	fmt.Printf("    🏷️\tTags: --\n")
-			// }
+			if len(task.Tags) > 0 {
+				fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
+			} else {
+				fmt.Printf("    🏷️\tTags: --\n")
+			}
 
 			fmt.Println()
 		}

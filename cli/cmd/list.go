@@ -30,6 +30,7 @@ var (
 	listProject   string
 	debugMode     bool
 	showCompleted bool
+	showAll       bool
 )
 
 var listCmd = &cobra.Command{
@@ -83,8 +84,12 @@ Priority levels:
 
 		// Status filter - by default only show pending and active tasks
 		var status []string
-		if !showCompleted {
+		if !showCompleted && !showAll {
 			status = []string{"pending", "active"}
+		} else if showCompleted {
+			status = []string{"completed"}
+		} else if showAll {
+			status = []string{"pending", "active", "completed"}
 		}
 
 		//TODO: remove when done with list.go
@@ -224,6 +229,8 @@ func init() {
 	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project")
 
 	// Add completed flag
+	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all tasks (including completed)")
+
 	listCmd.Flags().BoolVarP(&showCompleted, "completed", "c", false, "Show completed tasks")
 
 	// Here you will define your flags and configuration settings.

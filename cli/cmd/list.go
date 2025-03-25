@@ -72,6 +72,7 @@ Priority levels:
 		if cmd.Flags().Changed("priority") {
 			// Convert priority to uppercase for case-insensitive matching
 			uppercasePriority := strings.ToUpper(listPriority)
+			fmt.Printf("Debug: Priority: %s\n", uppercasePriority)
 			priorityPtr = &uppercasePriority
 		}
 

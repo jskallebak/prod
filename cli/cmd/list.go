@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jskallebak/prod/internal/db/sqlc"
@@ -220,49 +221,71 @@ Priority levels:
 
 		// Show title for the task list
 		if showCompleted {
-			fmt.Println("All tasks (including completed):")
+			fmt.Println("🗒️  All tasks (including completed):")
 		} else {
-			fmt.Println("Pending tasks:")
+			fmt.Println("🗒️  Pending tasks:")
 		}
-		fmt.Println()
+		fmt.Println("----------------------------------------------")
 
-		for _, task := range tasks {
-			fmt.Printf("ID: %d\n", task.ID)
-			fmt.Printf("Task: %s\n", task.Description)
+		for i, task := range tasks {
+			// Create status indicator
+			statusSymbol := "[ ]"
 			if task.CompletedAt.Valid {
-				fmt.Printf("Completed: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
-			} else {
-				fmt.Println("Status: Not completed")
+				statusSymbol = "[✓]"
 			}
+
+			// Print task header with ID and status (without priority)
+			fmt.Printf("%s #%d %s\n", statusSymbol, task.ID, task.Description)
+
+			// Print priority on a new line, showing "None" if not set
 			if task.Priority.Valid {
-				fmt.Printf("Priority: %s\n", task.Priority.String)
+				fmt.Printf("    🔄\tPriority: %s\n", task.Priority.String)
 			} else {
-				fmt.Println("Priority: None")
+				fmt.Printf("    🔄\tPriority: None\n")
 			}
+
+			// Print metadata indented
+			if task.CompletedAt.Valid {
+				fmt.Printf("    ✅\tCompleted: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
+			}
+
+			// Print project info, showing "None" if not set
 			if task.ProjectID.Valid {
-				// Get project name instead of just showing the ID
 				projectService := services.NewProjectService(queries)
 				project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, user.ID)
 				if err == nil && project != nil {
-					fmt.Printf("Project: %s (ID: %d)\n", project.Name, task.ProjectID.Int32)
+					fmt.Printf("    📁\tProject: %s\n", project.Name)
 				} else {
-					fmt.Printf("Project: ID %d\n", task.ProjectID.Int32)
+					fmt.Printf("    📁\tProject ID: %d\n", task.ProjectID.Int32)
 				}
 			} else {
-				fmt.Println("Project: None")
+				fmt.Printf("    📁\tProject: None\n")
 			}
+
+			// Print due date if exists, or "None" if not set
 			if task.DueDate.Valid {
-				fmt.Printf("Due: %s\n", task.DueDate.Time.Format("2006-01-02"))
+				// Calculate if the task is overdue
+				dueStatus := ""
+				if task.DueDate.Time.Before(time.Now()) && !task.CompletedAt.Valid {
+					dueStatus = " (OVERDUE)"
+				}
+				fmt.Printf("    📅\tDue: %s%s\n", task.DueDate.Time.Format("Mon, Jan 2, 2006"), dueStatus)
 			} else {
-				fmt.Println("Due: No deadline")
+				fmt.Printf("    📅\tDue: None\n")
 			}
+
+			// Print tags if exists
 			if len(task.Tags) > 0 {
-				fmt.Printf("Tags: %v\n", task.Tags)
-			} else {
-				fmt.Println("Tags: None")
+				fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
 			}
-			fmt.Println()
+
+			// Add separator between tasks, except after the last one
+			if i < len(tasks)-1 {
+				fmt.Println("----------------------------------------------")
+			}
 		}
+		fmt.Println("----------------------------------------------")
+		fmt.Printf("Total: %d tasks\n", len(tasks))
 	},
 }
 

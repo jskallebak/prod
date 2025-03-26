@@ -508,6 +508,10 @@ ORDER BY
         WHEN status = 'completed' THEN 0 
         ELSE 1 
     END,
+    CASE 
+        WHEN status = 'active' THEN 1
+        ELSE 0
+    END,
     COALESCE(id) ASC
 `
 

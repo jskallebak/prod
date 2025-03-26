@@ -42,7 +42,7 @@ For example:
 		taskService := services.NewTaskService(queries)
 
 		// Currently using a hardcoded user ID (1)
-		// In a real app, you would get this from authentication
+		//TODO: get real user instead
 		userID := int32(1)
 
 		// Complete the task

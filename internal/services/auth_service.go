@@ -17,7 +17,7 @@ type AuthService struct {
 	queries *sqlc.Queries
 }
 
-// NewTaskService creates a new TaskService
+// NewAuthService creates a new TaskService
 func NewAuthService(queries *sqlc.Queries) *AuthService {
 	return &AuthService{
 		queries: queries,

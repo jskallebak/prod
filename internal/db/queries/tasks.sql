@@ -19,6 +19,7 @@ SELECT * FROM tasks
 WHERE id = $1 AND user_id = $2
 LIMIT 1;
 
+
 -- name: ListTasks :many
 SELECT 
     id, 
@@ -103,6 +104,22 @@ UPDATE tasks
 SET
     status = 'completed',
     completed_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING *;
+
+-- name: StartTask :one
+UPDATE tasks
+SET
+    status = 'active',
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING *;
+
+-- name: PauseTask :one
+UPDATE tasks
+SET
+    status = 'pending',
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING *;

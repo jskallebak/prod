@@ -192,24 +192,28 @@ Priority levels:
 				} else {
 					fmt.Printf("    📁\tProject: ID %d\n", task.ProjectID.Int32)
 				}
-			} else {
-				fmt.Printf("    📁\tProject: --\n")
 			}
+			// else {
+			// 	fmt.Printf("    📁\tProject: --\n")
+			// }
 			if task.StartDate.Valid {
 				fmt.Printf("    📅\tStarted at: %s\n", task.StartDate.Time.Format("Mon, Jan 2, 2006"))
-			} else {
-				fmt.Printf("    📅\tStarted at: --\n")
 			}
+			// else {
+			// 	fmt.Printf("    📅\tStarted at: --\n")
+			// }
 			if task.DueDate.Valid {
 				fmt.Printf("    📅\tDue: %s\n", task.DueDate.Time.Format("Mon, Jan 2, 2006"))
-			} else {
-				fmt.Printf("    📅\tDue: --\n")
 			}
+			// else {
+			// 	fmt.Printf("    📅\tDue: --\n")
+			// }
 			if len(task.Tags) > 0 {
 				fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
-			} else {
-				fmt.Printf("    🏷️\tTags: --\n")
 			}
+			// else {
+			// 	fmt.Printf("    🏷️\tTags: --\n")
+			// }
 
 			fmt.Println()
 		}

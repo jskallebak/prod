@@ -122,6 +122,36 @@ func (s *TaskService) GetTask(ctx context.Context, taskID int32, userID int32) (
 	return &task, nil
 }
 
+func (s *TaskService) PauseTask(ctx context.Context, taskID, userID int32) (*sqlc.Task, error) {
+	task, err := s.queries.PauseTask(ctx, sqlc.PauseTaskParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to update the task to active: %w", err)
+	}
+	return &task, nil
+}
+
+func (s *TaskService) StartTask(ctx context.Context, taskID, userID int32) (*sqlc.Task, error) {
+	task, err := s.queries.StartTask(ctx, sqlc.StartTaskParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to update task to active: %w", err)
+	}
+	return &task, nil
+}
+
 // CompleteTask marks a task as completed
 func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int32) (*sqlc.Task, error) {
 	task, err := s.queries.CompleteTask(ctx, sqlc.CompleteTaskParams{
@@ -132,7 +162,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to complete task: %w", err)
+		return nil, fmt.Errorf("failed to update task to completed: %w", err)
 	}
 
 	return &task, nil

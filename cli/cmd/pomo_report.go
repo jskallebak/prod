@@ -200,4 +200,3 @@ func init() {
 	reportCmd.Flags().StringVar(&reportFormat, "format", "text", "Report format (text, json)")
 	reportCmd.Flags().StringVar(&reportOutput, "output", "console", "Report output (console, file)")
 }
-

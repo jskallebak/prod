@@ -558,6 +558,42 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 	return items, nil
 }
 
+const pauseTask = `-- name: PauseTask :one
+UPDATE tasks
+SET
+    status = 'pending',
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+`
+
+type PauseTaskParams struct {
+	ID     int32       `json:"id"`
+	UserID pgtype.Int4 `json:"user_id"`
+}
+
+func (q *Queries) PauseTask(ctx context.Context, arg PauseTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, pauseTask, arg.ID, arg.UserID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Description,
+		&i.Status,
+		&i.Priority,
+		&i.DueDate,
+		&i.StartDate,
+		&i.CompletedAt,
+		&i.ProjectID,
+		&i.Recurrence,
+		&i.Tags,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const removeTaskDependency = `-- name: RemoveTaskDependency :exec
 DELETE FROM task_dependencies
 WHERE task_id = $1 AND depends_on_id = $2
@@ -571,6 +607,42 @@ type RemoveTaskDependencyParams struct {
 func (q *Queries) RemoveTaskDependency(ctx context.Context, arg RemoveTaskDependencyParams) error {
 	_, err := q.db.Exec(ctx, removeTaskDependency, arg.TaskID, arg.DependsOnID)
 	return err
+}
+
+const startTask = `-- name: StartTask :one
+UPDATE tasks
+SET
+    status = 'active',
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+`
+
+type StartTaskParams struct {
+	ID     int32       `json:"id"`
+	UserID pgtype.Int4 `json:"user_id"`
+}
+
+func (q *Queries) StartTask(ctx context.Context, arg StartTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, startTask, arg.ID, arg.UserID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Description,
+		&i.Status,
+		&i.Priority,
+		&i.DueDate,
+		&i.StartDate,
+		&i.CompletedAt,
+		&i.ProjectID,
+		&i.Recurrence,
+		&i.Tags,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateTask = `-- name: UpdateTask :one

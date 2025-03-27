@@ -154,7 +154,6 @@ Priority levels:
 		} else {
 			fmt.Println("Pending tasks:")
 		}
-		fmt.Println()
 
 		for _, task := range tasks {
 			// Show task status with checkbox

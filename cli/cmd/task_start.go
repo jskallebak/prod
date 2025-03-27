@@ -48,6 +48,10 @@ to quickly create a Cobra application.`,
 		}
 
 		task, err := taskService.StartTask(context.Background(), int32(taskID), user.ID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "No tasks with ID %v\n", taskID)
+			return
+		}
 
 		fmt.Printf("Task %d marked as active\n", task.ID)
 		fmt.Printf("Description: %s\n", task.Description)

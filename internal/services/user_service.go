@@ -71,3 +71,36 @@ func (s *UserService) CreateUser(ctx context.Context, params CreateUserParams) (
 
 	return &user, nil
 }
+
+func (s *UserService) SetActiveProject(ctx context.Context, userID, projectID int32) error {
+	params := sqlc.SetActiveProjectParams{
+		ID: userID,
+		ActiveProjectID: pgtype.Int4{
+			Int32: projectID,
+			Valid: true,
+		},
+	}
+
+	err := s.queries.SetActiveProject(ctx, params)
+	if err != nil {
+		return err
+
+	}
+	return nil
+}
+
+func (s UserService) GetActiveProject(ctx context.Context, userID int32) (*sqlc.Project, error) {
+	proj, err := s.queries.GetActiveProject(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &proj, nil
+}
+
+func (s *UserService) ClearActiveProject(ctx context.Context, userID int32) error {
+	err := s.queries.ClearActiveProject(ctx, userID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

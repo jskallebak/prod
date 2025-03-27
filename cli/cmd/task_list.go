@@ -16,14 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	ColorBlue   = "\033[34m"
-	ColorGreen  = "\033[32m"
-	ColorYellow = "\033[33m"
-	ColorRed    = "\033[31m"
-	ColorReset  = "\033[0m"
-)
-
 // listCmd represents the list command
 var (
 	listPriority  string
@@ -60,8 +52,8 @@ Priority levels:
 		defer dbpool.Close()
 
 		taskService := services.NewTaskService(queries)
-
 		authService := services.NewAuthService(queries)
+
 		user, err := authService.GetCurrentUser(context.Background())
 		if err != nil {
 			fmt.Println("Needs to be logged in to show tasks")
@@ -160,11 +152,15 @@ Priority levels:
 			if task.CompletedAt.Valid {
 				status = "[✓]"
 			}
-			coloredDescription := fmt.Sprintf("%s%s%s", ColorGreen, task.Description, ColorReset)
+			coloredDescription := coloredText(ColorGreen, task.Description)
 			fmt.Printf("%s #%d %s\n", status, task.ID, coloredDescription)
 
 			// Show task details with emojis and consistent formatting
-			fmt.Printf("    🎯\tStatus: %s\n", task.Status) // Target/goal
+			if task.Status == "active" {
+				fmt.Printf("    🎯\tStatus: %s\n", coloredText(ColorBrightCyan, task.Status)) // Target/goal
+			} else {
+				fmt.Printf("    🎯\tStatus: %s\n", task.Status) // Target/goal
+			}
 			if task.CompletedAt.Valid {
 				fmt.Printf("    ✅\tCompleted: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
 			}
@@ -173,11 +169,11 @@ Priority levels:
 				priorityName := "Unknown"
 				switch task.Priority.String {
 				case "H":
-					priorityName = ColorRed + "High" + ColorReset
+					priorityName = coloredText(ColorRed, "High")
 				case "M":
-					priorityName = ColorYellow + "Medium" + ColorReset
+					priorityName = coloredText(ColorYellow, "Medium")
 				case "L":
-					priorityName = ColorGreen + "Low" + ColorReset
+					priorityName = coloredText(ColorGreen, "Low")
 				}
 				fmt.Printf("    🔄\tPriority: %s\n", priorityName)
 			} else {

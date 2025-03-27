@@ -3,11 +3,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 
 	"github.com/jskallebak/prod/internal/auth"
+	"github.com/jskallebak/prod/internal/services"
+	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +38,29 @@ Type 'prod help' for a list of available commands.`,
 			} else {
 				// Get user email from claims
 				fmt.Printf("Status: Logged in as %s\n", claim.Email)
+			}
+
+			dbpool, queries, ok := util.InitDBAndQueriesCLI()
+			if !ok {
+				fmt.Fprintf(os.Stderr, "Error connection to database: %w")
+				return
+			}
+			defer dbpool.Close()
+
+			authService := services.NewAuthService(queries)
+			userService := services.NewUserService(queries)
+
+			user, err := authService.GetCurrentUser(context.Background())
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error getting user %w", err)
+				return
+			}
+
+			proj, err := userService.GetActiveProject(context.Background(), user.ID)
+			if err != nil {
+				fmt.Println("No active project")
+			} else {
+				fmt.Println("Active project: ", proj.Name)
 			}
 		}
 

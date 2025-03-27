@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearActiveProject = `-- name: ClearActiveProject :exec
+UPDATE users
+SET
+    active_project_id = NULL,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) ClearActiveProject(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, clearActiveProject, id)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     email,
@@ -18,7 +31,7 @@ INSERT INTO users (
     name
 ) VALUES (
     $1, $2, $3
-) RETURNING id, email, password_hash, name, created_at, updated_at
+) RETURNING id, email, password_hash, name, created_at, updated_at, active_project_id
 `
 
 type CreateUserParams struct {
@@ -37,12 +50,35 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ActiveProjectID,
+	)
+	return i, err
+}
+
+const getActiveProject = `-- name: GetActiveProject :one
+SELECT p.id, p.user_id, p.name, p.description, p.deadline, p.created_at, p.updated_at FROM projects p
+JOIN users u ON p.id = u.active_project_id
+WHERE u.id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetActiveProject(ctx context.Context, id int32) (Project, error) {
+	row := q.db.QueryRow(ctx, getActiveProject, id)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Description,
+		&i.Deadline,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, password_hash, name, created_at, updated_at
+SELECT id, email, password_hash, name, created_at, updated_at, active_project_id
 FROM users
 WHERE email = $1
 LIMIT 1
@@ -58,8 +94,27 @@ func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
 		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ActiveProjectID,
 	)
 	return i, err
+}
+
+const setActiveProject = `-- name: SetActiveProject :exec
+UPDATE users
+SET
+    active_project_id = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type SetActiveProjectParams struct {
+	ID              int32       `json:"id"`
+	ActiveProjectID pgtype.Int4 `json:"active_project_id"`
+}
+
+func (q *Queries) SetActiveProject(ctx context.Context, arg SetActiveProjectParams) error {
+	_, err := q.db.Exec(ctx, setActiveProject, arg.ID, arg.ActiveProjectID)
+	return err
 }
 
 const updateUserEmail = `-- name: UpdateUserEmail :one
@@ -68,7 +123,7 @@ SET
     email = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, password_hash, name, created_at, updated_at
+RETURNING id, email, password_hash, name, created_at, updated_at, active_project_id
 `
 
 type UpdateUserEmailParams struct {
@@ -86,6 +141,7 @@ func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams
 		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ActiveProjectID,
 	)
 	return i, err
 }
@@ -96,7 +152,7 @@ SET
     password_hash = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, password_hash, name, created_at, updated_at
+RETURNING id, email, password_hash, name, created_at, updated_at, active_project_id
 `
 
 type UpdateUserPasswordParams struct {
@@ -114,6 +170,7 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ActiveProjectID,
 	)
 	return i, err
 }

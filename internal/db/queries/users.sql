@@ -28,3 +28,23 @@ SET
     updated_at = NOW()
 WHERE id = $1
 RETURNING *; 
+
+-- name: SetActiveProject :exec
+UPDATE users
+SET
+    active_project_id = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: GetActiveProject :one
+SELECT p.* FROM projects p
+JOIN users u ON p.id = u.active_project_id
+WHERE u.id = $1
+LIMIT 1;
+
+-- name: ClearActiveProject :exec
+UPDATE users
+SET
+    active_project_id = NULL,
+    updated_at = NOW()
+WHERE id = $1;

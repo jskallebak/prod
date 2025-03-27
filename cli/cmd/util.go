@@ -34,3 +34,7 @@ func formatDurationSeconds(seconds int64) string {
 		return fmt.Sprintf("%ds", remainingSeconds)
 	}
 }
+
+func coloredText(color Color, text string) string {
+	return fmt.Sprintf("%s%s%s", string(color), text, string(ColorReset))
+}

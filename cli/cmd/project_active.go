@@ -1,12 +1,16 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"strconv"
 
+	"github.com/jskallebak/prod/internal/services"
+	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +26,37 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("active called")
+
+		dbpool, queries, ok := util.InitDBAndQueriesCLI()
+		if !ok {
+			fmt.Fprintf(os.Stderr, "Error connection to database: %w")
+			return
+		}
+		defer dbpool.Close()
+
+		authService := services.NewAuthService(queries)
+		userService := services.NewUserService(queries)
+
+		user, err := authService.GetCurrentUser(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting user %w", err)
+			return
+		}
+
+		projectID, err := strconv.Atoi(args[0])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Invalid project ID\n")
+			return
+		}
+
+		err = userService.SetActiveProject(context.Background(), user.ID, int32(projectID))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error setting active project %w", err)
+			return
+		}
+
+		fmt.Printf("Active project set to %d\n", projectID)
+
 	},
 }
 

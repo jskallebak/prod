@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -53,6 +54,7 @@ Priority levels:
 
 		taskService := services.NewTaskService(queries)
 		authService := services.NewAuthService(queries)
+		userService := services.NewUserService(queries)
 
 		user, err := authService.GetCurrentUser(context.Background())
 		if err != nil {
@@ -69,9 +71,17 @@ Priority levels:
 		}
 
 		var projectPtr *string
+
+		// Handle project flag
 		if cmd.Flags().Changed("project") {
-			uppercaseProject := strings.ToUpper(listProject)
-			projectPtr = &uppercaseProject
+			projectPtr = &listProject
+		} else {
+			// if no project flag, checks for active project err == nil means there is a active project
+			proj, err := userService.GetActiveProject(context.Background(), user.ID)
+			if err == nil {
+				str := strconv.Itoa(int(proj.ID))
+				projectPtr = &str
+			}
 		}
 
 		// Status filter - by default only show pending and active tasks
@@ -95,7 +105,7 @@ Priority levels:
 			}
 
 			// Print DB connection info
-			fmt.Printf("Debug: Database connection established: %v\n", dbpool != nil)
+			fmt.Printf("Debug: Database connection e/ tablished: %v\n", dbpool != nil)
 
 			// Print SQL query test
 			countTest, err := queries.CountTasks(context.Background(), sqlc.CountTasksParams{

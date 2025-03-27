@@ -566,6 +566,7 @@ const pauseTask = `-- name: PauseTask :one
 UPDATE tasks
 SET
     status = 'pending',
+    start_date = NULL,
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
@@ -617,6 +618,7 @@ const startTask = `-- name: StartTask :one
 UPDATE tasks
 SET
     status = 'active',
+    start_date = NOW(),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at

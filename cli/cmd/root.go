@@ -42,7 +42,7 @@ Type 'prod help' for a list of available commands.`,
 
 			dbpool, queries, ok := util.InitDBAndQueriesCLI()
 			if !ok {
-				fmt.Fprintf(os.Stderr, "Error connection to database: %w")
+				fmt.Fprintf(os.Stderr, "Error connection to database")
 				return
 			}
 			defer dbpool.Close()
@@ -52,7 +52,7 @@ Type 'prod help' for a list of available commands.`,
 
 			user, err := authService.GetCurrentUser(context.Background())
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error getting user %w", err)
+				fmt.Fprintf(os.Stderr, "Error getting user\n")
 				return
 			}
 

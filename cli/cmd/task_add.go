@@ -49,17 +49,22 @@ For example:
 		}
 		defer dbpool.Close()
 
-		// Create queries and service
+		// Create queries and services
 		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
+		authService := services.NewAuthService(queries)
+		userService := services.NewUserService(queries)
 
-		// Create parameters for new task
+		user, err := authService.GetCurrentUser(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting the user: %v\n", err)
+		}
+
 		params := services.TaskParams{
 			Description: description,
 			Tags:        taskTags,
 		}
 
-		// Parse due date if provided
 		// Parse due date if provided
 		if cmd.Flags().Changed("due") {
 			// Try parsing with full date format (YYYY-MM-DD)
@@ -96,6 +101,12 @@ For example:
 		if cmd.Flags().Changed("project") && taskProjectID > 0 {
 			projectID := int32(taskProjectID)
 			params.ProjectID = &projectID
+		} else {
+			proj, err := userService.GetActiveProject(context.Background(), user.ID)
+			if err == nil {
+				projectID := int32(proj.ID)
+				params.ProjectID = &projectID
+			}
 		}
 
 		// Add notes if provided
@@ -103,10 +114,7 @@ For example:
 			params.Notes = &taskNotes
 		}
 
-		// Create the task (using user ID 1 for now - you'd get the actual user ID from authentication)
-		//TODO: In a multi-user setup, you would get the user ID from auth context
-		userID := int32(1)
-		task, err := taskService.CreateTask(context.Background(), userID, params)
+		task, err := taskService.CreateTask(context.Background(), user.ID, params)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating task: %v\n", err)
 			return

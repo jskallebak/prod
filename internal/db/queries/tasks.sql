@@ -116,6 +116,7 @@ RETURNING *;
 UPDATE tasks
 SET
     status = 'active',
+    start_date = NOW(),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING *;
@@ -124,6 +125,7 @@ RETURNING *;
 UPDATE tasks
 SET
     status = 'pending',
+    start_date = NULL,
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING *;

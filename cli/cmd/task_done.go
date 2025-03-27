@@ -37,16 +37,19 @@ For example:
 		}
 		defer dbpool.Close()
 
-		// Create queries and service
+		// Create queries and services
 		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
+		authService := services.NewAuthService(queries)
 
-		// Currently using a hardcoded user ID (1)
-		//TODO: get real user instead
-		userID := int32(1)
+		user, err := authService.GetCurrentUser(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			return
+		}
 
 		// Complete the task
-		completedTask, err := taskService.CompleteTask(context.Background(), int32(taskID), userID)
+		completedTask, err := taskService.CompleteTask(context.Background(), int32(taskID), user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error marking task as completed: %v\n", err)
 			return

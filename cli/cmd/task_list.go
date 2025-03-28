@@ -145,6 +145,8 @@ Priority levels:
 				fmt.Println("No tasks found")
 				fmt.Println("\nTip: Create a task with: prod task add \"My first task\"")
 			}
+			taskMap := map[int]int32{}
+			makeTaskMapFile(taskMap)
 			return
 		}
 

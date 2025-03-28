@@ -82,7 +82,7 @@ func makeTaskMapFile(m map[int]int32) error {
 	return nil
 }
 
-func loadTaskMap() (map[int]int32, error) {
+func getTaskMap() (map[int]int32, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("Error getting hom edirectory: %w\n", err)
@@ -108,26 +108,21 @@ func loadTaskMap() (map[int]int32, error) {
 	return taskMap, nil
 }
 
-func getTaskID(input string) (int32, error) {
-	taskMap, err := loadTaskMap()
-	if err != nil {
-		return 0, err
-	}
-
+func getTaskID(m map[int]int32, input string) (int32, error) {
 	inputInt, err := strconv.Atoi(input)
 	if err != nil {
 		return 0, fmt.Errorf("Error converting input to int %w", err)
 	}
 
-	taskID, exits := taskMap[inputInt]
+	taskID, exits := m[inputInt]
 	if !exits {
 		return 0, fmt.Errorf("No tasks with %s iD", input)
 	}
 	return taskID, nil
 }
 
-func appendTask(input string) (map[int]int32, error) {
-	taskMap, err := loadTaskMap()
+func appendToMap(m map[int]int32, input string) (map[int]int32, error) {
+	taskMap, err := getTaskMap()
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +132,6 @@ func appendTask(input string) (map[int]int32, error) {
 		return nil, errors.New("Invalid input type")
 	}
 
-	fmt.Println(taskMap)
 	highestKey, err := findHighestKey(taskMap)
 	if err != nil {
 		taskMap[1] = int32(i)
@@ -148,7 +142,21 @@ func appendTask(input string) (map[int]int32, error) {
 	return taskMap, nil
 }
 
-func removeTask(input string) error {
+func removeFromMap(m map[int]int32, input string) error {
+	inputInt, err := strconv.Atoi(input)
+	if err != nil {
+		return fmt.Errorf("Error converting input to int %w", err)
+	}
+
+	fmt.Println("inputInt:", inputInt)
+
+	_, exits := m[inputInt]
+	if !exits {
+		return fmt.Errorf("No tasks with %s ID", input)
+	}
+
+	delete(m, inputInt)
+
 	return nil
 }
 

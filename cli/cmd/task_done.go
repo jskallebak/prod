@@ -22,7 +22,11 @@ For example:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		inputID := args[0]
-		taskID, err := getTaskID(inputID)
+		taskMap, err := getTaskMap()
+		if err != nil {
+			taskMap = map[int]int32{}
+		}
+		taskID, err := getTaskID(taskMap, inputID)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -50,7 +54,7 @@ For example:
 			return
 		}
 
-		fmt.Printf("Task %s marked as completed\n", inputID)
+		fmt.Printf("Task %sargs[0] marked as completed\n", inputID)
 		fmt.Printf("Description: %s\n", completedTask.Description)
 		fmt.Printf("Completed at: %s\n", completedTask.CompletedAt.Time.Format("2006-01-02 15:04:05"))
 	},

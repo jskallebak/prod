@@ -43,13 +43,15 @@ For example:
 		// Create queries and service
 		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
+		authService := services.NewAuthService(queries)
 
-		// Currently using a hardcoded user ID (1)
-		// In a real app, you would get this from authentication
-		userID := int32(1)
+		user, err := authService.GetCurrentUser(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to get user %v", err)
+		}
 
 		// Get task info for confirmation
-		task, err := taskService.GetTask(context.Background(), int32(taskID), userID)
+		task, err := taskService.GetTask(context.Background(), int32(taskID), user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
 			return
@@ -68,7 +70,7 @@ For example:
 		}
 
 		// Delete the task
-		err = taskService.DeleteTask(context.Background(), int32(taskID), userID)
+		err = taskService.DeleteTask(context.Background(), int32(taskID), user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error deleting task: %v\n", err)
 			return

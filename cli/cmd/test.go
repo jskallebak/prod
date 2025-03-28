@@ -43,9 +43,22 @@ This is primarily used for development and debugging purposes.`,
 			fmt.Printf("Name: %s\n", user.Name.String)
 		}
 
-		taskMap, err := appendTask("100")
+		taskMap, err := getTaskMap()
 		if err != nil {
 			fmt.Println(err)
+			return
+		}
+
+		taskMap, err = appendToMap(taskMap, "100")
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(taskMap)
+
+		err = removeFromMap(taskMap, "2")
+		if err != nil {
+			fmt.Println(err)
+			return
 		}
 		fmt.Println(taskMap)
 

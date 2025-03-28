@@ -65,13 +65,15 @@ Available flags:
 		// Create queries and service
 		queries := sqlc.New(dbpool)
 		taskService := services.NewTaskService(queries)
+		authService := services.NewAuthService(queries)
 
-		// Currently using a hardcoded user ID (1)
-		// In a real app, you would get this from authentication
-		userID := int32(1)
+		user, err := authService.GetCurrentUser(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to get user: %s", err)
+		}
 
 		// Get existing task to edit
-		existingTask, err := taskService.GetTask(context.Background(), int32(taskID), userID)
+		existingTask, err := taskService.GetTask(context.Background(), int32(taskID), user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
 			return
@@ -80,7 +82,7 @@ Available flags:
 		// Prepare update params with existing values
 		updateParams := sqlc.UpdateTaskParams{
 			ID:          existingTask.ID,
-			UserID:      pgtype.Int4{Int32: userID, Valid: true},
+			UserID:      pgtype.Int4{Int32: user.ID, Valid: true},
 			Description: existingTask.Description,
 			Status:      existingTask.Status,
 			Priority:    existingTask.Priority,
@@ -138,6 +140,7 @@ Available flags:
 
 		if cmd.Flags().Changed("status") {
 			updateParams.Status = editStatus
+
 		}
 		// Call the service to update the task
 		updatedTask, err := queries.UpdateTask(context.Background(), updateParams)

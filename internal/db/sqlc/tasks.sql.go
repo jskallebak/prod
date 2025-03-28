@@ -663,7 +663,11 @@ SET
     recurrence = COALESCE($9, recurrence),
     tags = COALESCE($10, tags),
     notes = COALESCE($11, notes),
-    updated_at = NOW()
+    updated_at = NOW(),
+    completed_at = CASE 
+        WHEN $4 = 'completed' THEN NOW() 
+        ELSE NULL 
+    END
 WHERE id = $1 AND user_id = $2
 RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
 `

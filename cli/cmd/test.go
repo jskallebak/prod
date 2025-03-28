@@ -43,7 +43,12 @@ This is primarily used for development and debugging purposes.`,
 			fmt.Printf("Name: %s\n", user.Name.String)
 		}
 
-		loadTaskMap()
+		taskMap, err := appendTask("100")
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(taskMap)
+
 	},
 }
 

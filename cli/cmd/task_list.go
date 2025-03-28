@@ -5,10 +5,8 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -227,45 +225,7 @@ Priority levels:
 			taskMap[i+1] = task.ID
 		}
 
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			fmt.Println("Error getting home directory:", err)
-			return
-		}
-
-		// Create a .prod directory in the home directory
-		prodDir := filepath.Join(homeDir, ".prod")
-		err = os.MkdirAll(prodDir, 0755) // Creates directory if it doesn't exist
-		if err != nil {
-			fmt.Println("Error creating directory:", err)
-			return
-		}
-
-		// Save the file in the .prod directory
-		filePath := filepath.Join(prodDir, "taskMap.json")
-
-		// Create a file (or truncate it if it already exists)
-		file, err := os.Create(filePath)
-		if err != nil {
-			fmt.Println("Error creating file:", err)
-			return
-		}
-		defer file.Close()
-
-		// The rest of your code looks good
-		fmt.Println(taskMap)
-		// Marshal map to JSON with indentation
-		jsonData, err := json.MarshalIndent(taskMap, "", "  ")
-		if err != nil {
-			fmt.Println("Error marshaling to JSON:", err)
-			return
-		}
-		// Write JSON to file
-		_, err = file.Write(jsonData)
-		if err != nil {
-			fmt.Println("Error writing to file:", err)
-			return
-		}
+		makeTaskMapFile(taskMap)
 	},
 }
 

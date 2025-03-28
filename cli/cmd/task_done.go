@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
@@ -22,12 +21,8 @@ For example:
   prod task done 5  # Marks task with ID 5 as completed`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// Parse task ID from arguments
-		taskID, err := strconv.Atoi(args[0])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
-			return
-		}
+		inputID := args[0]
+		taskID, err := getTaskID(inputID)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -55,7 +50,7 @@ For example:
 			return
 		}
 
-		fmt.Printf("Task %d marked as completed\n", completedTask.ID)
+		fmt.Printf("Task %s marked as completed\n", inputID)
 		fmt.Printf("Description: %s\n", completedTask.Description)
 		fmt.Printf("Completed at: %s\n", completedTask.CompletedAt.Time.Format("2006-01-02 15:04:05"))
 	},

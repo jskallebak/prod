@@ -42,6 +42,8 @@ This is primarily used for development and debugging purposes.`,
 		if user.Name.Valid {
 			fmt.Printf("Name: %s\n", user.Name.String)
 		}
+
+		loadTaskMap()
 	},
 }
 

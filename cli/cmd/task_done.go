@@ -22,11 +22,10 @@ For example:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		inputID := args[0]
-		taskMap, err := getTaskMap()
+		taskID, err := getID(getTaskMap, inputID)
 		if err != nil {
-			taskMap = map[int]int32{}
+			fmt.Fprintf(os.Stderr, "%v", err)
 		}
-		taskID, err := getTaskID(taskMap, inputID)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()

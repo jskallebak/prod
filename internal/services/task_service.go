@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -217,6 +219,104 @@ func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int32
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete task: %w", err)
+	}
+
+	return nil
+}
+
+func (s *TaskService) AddTag(ctx context.Context, userID, taskID int32, tags []string) error {
+	oldTags, err := s.GetTags(ctx, userID, taskID)
+	if err != nil {
+		return err
+	}
+
+	cleanedTags := []string{}
+	for _, tag := range tags {
+		cleaned := strings.TrimSpace(tag)
+		if cleaned == "" {
+			continue
+		}
+		cleanedTags = append(cleanedTags, tag)
+
+	}
+
+	tags = append(oldTags, cleanedTags...)
+	params := sqlc.SetTagsParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+		Tags: tags,
+	}
+	err = s.queries.SetTags(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *TaskService) GetTags(ctx context.Context, userID, taskID int32) ([]string, error) {
+	params := sqlc.GetTagsParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+	}
+
+	tags, err := s.queries.GetTags(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get tags: %w", err)
+	}
+
+	return tags, nil
+}
+
+func (s *TaskService) ClearTags(ctx context.Context, userID, taskID int32) error {
+	params := sqlc.ClearTagsParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+	}
+	err := s.queries.ClearTags(ctx, params)
+	if err != nil {
+		return fmt.Errorf("Failed to clear tags: %w", err)
+	}
+	return nil
+}
+
+func (s *TaskService) RemoveTags(ctx context.Context, userID, taskID int32, tags []string) error {
+	removeMap := make(map[string]struct{})
+	for _, s := range tags {
+		removeMap[s] = struct{}{}
+	}
+
+	oldTags, err := s.GetTags(ctx, userID, taskID)
+	if err != nil {
+		return err
+	}
+
+	result := slices.DeleteFunc(oldTags, func(s string) bool {
+		_, found := removeMap[s]
+		return found
+	})
+
+	params := sqlc.SetTagsParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+		Tags: result,
+	}
+
+	err = s.queries.SetTags(ctx, params)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -60,6 +60,12 @@ ORDER BY
         WHEN status = 'active' THEN 1
         ELSE 0
     END,
+    CASE
+        WHEN priority = 'L' THEN 1
+        WHEN priority = 'M' THEN 2
+        WHEN priority = 'H' THEN 3
+        ELSE 0
+    END,
     COALESCE(id) ASC;
 
 -- name: CountTasks :one
@@ -198,3 +204,18 @@ SET
 WHERE id = $1 AND user_id = $2
 RETURNING *;
 
+-- name: ClearTags :exec
+UPDATE tasks
+SET
+    tags = NULL
+WHERE id = $1 AND user_id = $2;
+
+-- name: GetTags :one
+SELECT tags FROM tasks
+WHERE id = $1 AND user_id = $2;
+
+-- name: SetTags :exec
+UPDATE tasks
+SET
+    tags = $3
+WHERE id = $1 AND user_id = $2;

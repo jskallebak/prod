@@ -27,10 +27,11 @@ This is primarily used for development and debugging purposes.`,
 		}
 		defer dbpool.Close()
 
-		auth := services.NewAuthService(queries)
+		authS := services.NewAuthService(queries)
+		taskS := services.NewTaskService(queries)
 
 		// Try to get the current user
-		user, err := auth.GetCurrentUser(context.Background())
+		user, err := authS.GetCurrentUser(context.Background())
 		if err != nil {
 			fmt.Printf("No authenticated user found: %v\n", err)
 			return
@@ -49,19 +50,12 @@ This is primarily used for development and debugging purposes.`,
 			return
 		}
 
-		taskMap, err = appendToMap(taskMap, "100")
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(taskMap)
-
-		err = removeFromMap(taskMap, "2")
+		tags, err := taskS.GetTags(context.Background(), user.ID, taskMap[10])
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(taskMap)
-
+		fmt.Println(tags)
 	},
 }
 

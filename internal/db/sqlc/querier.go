@@ -14,6 +14,7 @@ type Querier interface {
 	AddTaskDependency(ctx context.Context, arg AddTaskDependencyParams) error
 	AttachTaskToPomodoro(ctx context.Context, arg AttachTaskToPomodoroParams) (PomodoroSession, error)
 	ClearActiveProject(ctx context.Context, id int32) error
+	ClearTags(ctx context.Context, arg ClearTagsParams) error
 	CompleteTask(ctx context.Context, arg CompleteTaskParams) (Task, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (CountTasksRow, error)
 	CreatePomodoroSession(ctx context.Context, arg CreatePomodoroSessionParams) (PomodoroSession, error)
@@ -32,6 +33,7 @@ type Querier interface {
 	GetProject(ctx context.Context, arg GetProjectParams) (Project, error)
 	GetProjectTasks(ctx context.Context, arg GetProjectTasksParams) ([]Task, error)
 	GetRecentlyCompletedTasks(ctx context.Context, arg GetRecentlyCompletedTasksParams) ([]Task, error)
+	GetTags(ctx context.Context, arg GetTagsParams) ([]string, error)
 	GetTask(ctx context.Context, arg GetTaskParams) (Task, error)
 	GetTaskDependencies(ctx context.Context, arg GetTaskDependenciesParams) ([]Task, error)
 	GetTasksByTag(ctx context.Context, arg GetTasksByTagParams) ([]Task, error)
@@ -46,6 +48,7 @@ type Querier interface {
 	RemoveTaskFromProject(ctx context.Context, arg RemoveTaskFromProjectParams) (Task, error)
 	ResumePomodoroSession(ctx context.Context, arg ResumePomodoroSessionParams) (PomodoroSession, error)
 	SetActiveProject(ctx context.Context, arg SetActiveProjectParams) error
+	SetTags(ctx context.Context, arg SetTagsParams) error
 	StartTask(ctx context.Context, arg StartTaskParams) (Task, error)
 	StopPomodoroSession(ctx context.Context, arg StopPomodoroSessionParams) (PomodoroSession, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)

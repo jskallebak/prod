@@ -30,6 +30,23 @@ func (q *Queries) AddTaskDependency(ctx context.Context, arg AddTaskDependencyPa
 	return err
 }
 
+const clearTags = `-- name: ClearTags :exec
+UPDATE tasks
+SET
+    tags = NULL
+WHERE id = $1 AND user_id = $2
+`
+
+type ClearTagsParams struct {
+	ID     int32       `json:"id"`
+	UserID pgtype.Int4 `json:"user_id"`
+}
+
+func (q *Queries) ClearTags(ctx context.Context, arg ClearTagsParams) error {
+	_, err := q.db.Exec(ctx, clearTags, arg.ID, arg.UserID)
+	return err
+}
+
 const completeTask = `-- name: CompleteTask :one
 UPDATE tasks
 SET
@@ -293,6 +310,23 @@ func (q *Queries) GetRecentlyCompletedTasks(ctx context.Context, arg GetRecently
 	return items, nil
 }
 
+const getTags = `-- name: GetTags :one
+SELECT tags FROM tasks
+WHERE id = $1 AND user_id = $2
+`
+
+type GetTagsParams struct {
+	ID     int32       `json:"id"`
+	UserID pgtype.Int4 `json:"user_id"`
+}
+
+func (q *Queries) GetTags(ctx context.Context, arg GetTagsParams) ([]string, error) {
+	row := q.db.QueryRow(ctx, getTags, arg.ID, arg.UserID)
+	var tags []string
+	err := row.Scan(&tags)
+	return tags, err
+}
+
 const getTask = `-- name: GetTask :one
 SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at FROM tasks
 WHERE id = $1 AND user_id = $2
@@ -512,6 +546,12 @@ ORDER BY
         WHEN status = 'active' THEN 1
         ELSE 0
     END,
+    CASE
+        WHEN priority = 'L' THEN 1
+        WHEN priority = 'M' THEN 2
+        WHEN priority = 'H' THEN 3
+        ELSE 0
+    END,
     COALESCE(id) ASC
 `
 
@@ -611,6 +651,24 @@ type RemoveTaskDependencyParams struct {
 
 func (q *Queries) RemoveTaskDependency(ctx context.Context, arg RemoveTaskDependencyParams) error {
 	_, err := q.db.Exec(ctx, removeTaskDependency, arg.TaskID, arg.DependsOnID)
+	return err
+}
+
+const setTags = `-- name: SetTags :exec
+UPDATE tasks
+SET
+    tags = $3
+WHERE id = $1 AND user_id = $2
+`
+
+type SetTagsParams struct {
+	ID     int32       `json:"id"`
+	UserID pgtype.Int4 `json:"user_id"`
+	Tags   []string    `json:"tags"`
+}
+
+func (q *Queries) SetTags(ctx context.Context, arg SetTagsParams) error {
+	_, err := q.db.Exec(ctx, setTags, arg.ID, arg.UserID, arg.Tags)
 	return err
 }
 

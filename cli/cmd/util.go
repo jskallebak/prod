@@ -108,38 +108,39 @@ func getTaskMap() (map[int]int32, error) {
 	return taskMap, nil
 }
 
-func getTaskID(m map[int]int32, input string) (int32, error) {
-	inputInt, err := strconv.Atoi(input)
+func getID(mapFunc func() (map[int]int32, error), input string) (int32, error) {
+	i, err := strconv.Atoi(input)
 	if err != nil {
-		return 0, fmt.Errorf("Error converting input to int %w", err)
+		return 0, fmt.Errorf("Error converting input to stirng: %w", err)
+	}
+	m, err := mapFunc()
+	if err != nil {
+		return 0, err
 	}
 
-	taskID, exits := m[inputInt]
+	taskID, exits := m[i]
 	if !exits {
 		return 0, fmt.Errorf("No tasks with %s iD", input)
 	}
 	return taskID, nil
 }
 
-func appendToMap(m map[int]int32, input string) (map[int]int32, error) {
+func appendToMap(m map[int]int32, input int32) (map[int]int32, int, error) {
 	taskMap, err := getTaskMap()
 	if err != nil {
-		return nil, err
-	}
-
-	i, err := strconv.Atoi(input)
-	if err != nil {
-		return nil, errors.New("Invalid input type")
+		return nil, 0, err
 	}
 
 	highestKey, err := findHighestKey(taskMap)
+	index := 1
 	if err != nil {
-		taskMap[1] = int32(i)
-		return taskMap, nil
+		taskMap[index] = input
+		return taskMap, 0, nil
 	}
-	taskMap[highestKey+1] = int32(i)
+	index = highestKey + 1
+	taskMap[index] = input
 
-	return taskMap, nil
+	return taskMap, index, nil
 }
 
 func removeFromMap(m map[int]int32, input string) error {

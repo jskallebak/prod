@@ -120,7 +120,27 @@ For example:
 			return
 		}
 
-		fmt.Printf("Created task: %s (ID: %d)\n", description, task.ID)
+		taskMap, err := getTaskMap()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println(taskMap)
+
+		taskMap, index, err := appendToMap(taskMap, task.ID)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		err = makeTaskMapFile(taskMap)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Printf("Created task: %s (ID: %d)\n", description, index)
 		fmt.Printf("Created at: %s\n", task.CreatedAt.Time.Format("2006-01-02 15:04"))
 	},
 }

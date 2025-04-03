@@ -171,7 +171,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int
 }
 
 // ListTasks retrieves tasks with optional filtering
-func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string, status []string) ([]sqlc.Task, error) {
+func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string, tags []string, status []string) ([]sqlc.Task, error) {
 	// Create params object with userID being mandatory
 	params := sqlc.ListTasksParams{
 		UserID: pgtype.Int4{
@@ -201,7 +201,12 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 		params.Status = status
 	}
 
+	if len(tags) > 0 {
+		params.Tags = tags
+	}
+
 	tasks, err := s.queries.ListTasks(ctx, params)
+	fmt.Println("AABB", tags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tasks: %w", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/jskallebak/prod/internal/db/sqlc"
@@ -24,7 +23,8 @@ For example:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse task ID from arguments
-		taskID, err := strconv.Atoi(args[0])
+		input := args[0]
+		taskID, err := getID(getTaskMap, input)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
 			return
@@ -70,7 +70,7 @@ For example:
 		if task.CompletedAt.Valid {
 			status = "[✓]"
 		}
-		fmt.Printf("%s #%d %s\n", status, task.ID, task.Description)
+		fmt.Printf("%s #%s %s\n", status, input, task.Description)
 
 		// Show task details with emojis and consistent formatting
 		if task.CompletedAt.Valid {

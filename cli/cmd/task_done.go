@@ -21,10 +21,10 @@ For example:
   prod task done 5  # Marks task with ID 5 as completed`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		inputID := args[0]
-		taskID, err := getID(getTaskMap, inputID)
+		input := args[0]
+		taskID, err := getID(getTaskMap, input)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v", err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 
 		// Initialize DB connection
@@ -47,13 +47,13 @@ For example:
 		}
 
 		// Complete the task
-		completedTask, err := taskService.CompleteTask(context.Background(), int32(taskID), user.ID)
+		completedTask, err := taskService.CompleteTask(context.Background(), taskID, user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error marking task as completed: %v\n", err)
 			return
 		}
 
-		fmt.Printf("Task %sargs[0] marked as completed\n", inputID)
+		fmt.Printf("Task %s marked as completed\n", input)
 		fmt.Printf("Description: %s\n", completedTask.Description)
 		fmt.Printf("Completed at: %s\n", completedTask.CompletedAt.Time.Format("2006-01-02 15:04:05"))
 	},

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
@@ -26,7 +25,11 @@ For example:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse task ID from arguments
-		taskID, err := strconv.Atoi(args[0])
+		input := args[0]
+		taskID, err := getID(getTaskMap, input)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
 			return
@@ -59,7 +62,7 @@ For example:
 
 		// Confirm deletion unless --yes flag is used
 		if !confirmDelete {
-			fmt.Printf("You are about to delete task %d: \"%s\"\n", task.ID, task.Description)
+			fmt.Printf("You are about to delete task %s: \"%s\"\n", input, task.Description)
 			fmt.Print("Are you sure? (y/N): ")
 			var confirmation string
 			fmt.Scanln(&confirmation)
@@ -76,7 +79,7 @@ For example:
 			return
 		}
 
-		fmt.Printf("Task %d deleted successfully\n", taskID)
+		fmt.Printf("Task %s deleted successfully\n", input)
 	},
 }
 

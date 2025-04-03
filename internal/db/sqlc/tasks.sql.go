@@ -537,6 +537,10 @@ AND (
     $4::text[] IS NULL
     OR status = ANY($4)
 )
+AND (
+    $5::text[] IS NULL
+    OR tags && $5
+)
 ORDER BY
     CASE 
         WHEN status = 'completed' THEN 0 
@@ -560,6 +564,7 @@ type ListTasksParams struct {
 	Priority pgtype.Text `json:"priority"`
 	Project  pgtype.Text `json:"project"`
 	Status   []string    `json:"status"`
+	Tags     []string    `json:"tags"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
@@ -568,6 +573,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 		arg.Priority,
 		arg.Project,
 		arg.Status,
+		arg.Tags,
 	)
 	if err != nil {
 		return nil, err

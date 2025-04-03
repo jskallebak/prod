@@ -21,6 +21,7 @@ import (
 var (
 	listPriority  string
 	listProject   string
+	tagsList      []string
 	debugMode     bool
 	showCompleted bool
 	showAll       bool
@@ -84,6 +85,10 @@ Priority levels:
 			}
 		}
 
+		if cmd.Flags().Changed("tag") {
+
+		}
+
 		// Status filter - by default only show pending and active tasks
 		var status []string
 		if !showCompleted && !showAll {
@@ -122,7 +127,7 @@ Priority levels:
 			}
 		}
 
-		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, status)
+		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, tagsList, status)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return
@@ -242,6 +247,8 @@ func init() {
 
 	// Add project flag
 	listCmd.Flags().StringVarP(&listProject, "project", "P", "", "Filter tasks by project")
+
+	listCmd.Flags().StringSliceVarP(&tagsList, "tags", "t", []string{}, "Filter tasks by project")
 
 	// Add completed flag
 	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all tasks (including completed)")

@@ -34,6 +34,7 @@ SELECT
     recurrence,
     tags,
     notes,
+    dependent_task,
     created_at,
     updated_at
 FROM 
@@ -50,6 +51,10 @@ AND (
 AND (
     sqlc.narg('status')::text[] IS NULL
     OR status = ANY(sqlc.narg('status'))
+)
+AND (
+    sqlc.narg(tags)::text[] IS NULL
+    OR tags && sqlc.narg(tags)
 )
 ORDER BY
     CASE 

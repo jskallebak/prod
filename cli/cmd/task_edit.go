@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -48,7 +47,8 @@ Available flags:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse task ID from arguments
-		taskID, err := strconv.Atoi(args[0])
+		input := args[0]
+		taskID, err := getID(getTaskMap, input)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
 			return
@@ -73,7 +73,7 @@ Available flags:
 		}
 
 		// Get existing task to edit
-		existingTask, err := taskService.GetTask(context.Background(), int32(taskID), user.ID)
+		existingTask, err := taskService.GetTask(context.Background(), taskID, user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
 			return
@@ -149,7 +149,7 @@ Available flags:
 			return
 		}
 
-		fmt.Printf("Task %d updated successfully\n", updatedTask.ID)
+		fmt.Printf("Task %s updated successfully\n", input)
 		fmt.Printf("Description: %s\n", updatedTask.Description)
 		if updatedTask.Priority.Valid {
 			fmt.Printf("Priority: %s\n", updatedTask.Priority.String)

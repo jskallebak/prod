@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
@@ -25,7 +24,11 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		taskID, err := strconv.Atoi(args[0])
+		input := args[0]
+		taskID, err := getID(getTaskMap, input)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error invalid task ID\n")
 			return
@@ -47,13 +50,13 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		task, err := taskService.StartTask(context.Background(), int32(taskID), user.ID)
+		task, err := taskService.StartTask(context.Background(), taskID, user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "No tasks with ID %v\n", taskID)
 			return
 		}
 
-		fmt.Printf("Task %d marked as active\n", task.ID)
+		fmt.Printf("Task %s marked as active\n", input)
 		fmt.Printf("Description: %s\n", task.Description)
 		fmt.Printf("updated at: %s\n", task.UpdatedAt.Time.Format("2006-01-02 15:04:05"))
 

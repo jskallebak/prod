@@ -91,7 +91,7 @@ func (q *Queries) GetProject(ctx context.Context, arg GetProjectParams) (Project
 }
 
 const getProjectTasks = `-- name: GetProjectTasks :many
-SELECT t.id, t.user_id, t.description, t.status, t.priority, t.due_date, t.start_date, t.completed_at, t.project_id, t.recurrence, t.tags, t.notes, t.created_at, t.updated_at FROM tasks t
+SELECT t.id, t.user_id, t.description, t.status, t.priority, t.due_date, t.start_date, t.completed_at, t.project_id, t.recurrence, t.tags, t.notes, t.created_at, t.updated_at, t.dependent FROM tasks t
 WHERE t.project_id = $1 AND t.user_id = $2
 ORDER BY t.created_at DESC
 `
@@ -125,6 +125,7 @@ func (q *Queries) GetProjectTasks(ctx context.Context, arg GetProjectTasksParams
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Dependent,
 		); err != nil {
 			return nil, err
 		}
@@ -176,7 +177,7 @@ SET
     project_id = NULL,
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type RemoveTaskFromProjectParams struct {
@@ -202,6 +203,7 @@ func (q *Queries) RemoveTaskFromProject(ctx context.Context, arg RemoveTaskFromP
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }

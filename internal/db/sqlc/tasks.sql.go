@@ -54,7 +54,7 @@ SET
     completed_at = NOW(),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type CompleteTaskParams struct {
@@ -80,6 +80,7 @@ func (q *Queries) CompleteTask(ctx context.Context, arg CompleteTaskParams) (Tas
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }
@@ -151,7 +152,7 @@ INSERT INTO tasks (
     notes
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+) RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type CreateTaskParams struct {
@@ -196,6 +197,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }
@@ -216,7 +218,7 @@ func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) error {
 }
 
 const getDependentTasks = `-- name: GetDependentTasks :many
-SELECT t.id, t.user_id, t.description, t.status, t.priority, t.due_date, t.start_date, t.completed_at, t.project_id, t.recurrence, t.tags, t.notes, t.created_at, t.updated_at FROM tasks t
+SELECT t.id, t.user_id, t.description, t.status, t.priority, t.due_date, t.start_date, t.completed_at, t.project_id, t.recurrence, t.tags, t.notes, t.created_at, t.updated_at, t.dependent FROM tasks t
 JOIN task_dependencies td ON t.id = td.task_id
 WHERE td.depends_on_id = $1 AND t.user_id = $2
 ORDER BY t.created_at DESC
@@ -251,6 +253,7 @@ func (q *Queries) GetDependentTasks(ctx context.Context, arg GetDependentTasksPa
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Dependent,
 		); err != nil {
 			return nil, err
 		}
@@ -263,7 +266,7 @@ func (q *Queries) GetDependentTasks(ctx context.Context, arg GetDependentTasksPa
 }
 
 const getRecentlyCompletedTasks = `-- name: GetRecentlyCompletedTasks :many
-SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at FROM tasks
+SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent FROM tasks
 WHERE user_id = $1
 AND status = 'completed'
 ORDER BY completed_at DESC
@@ -299,6 +302,7 @@ func (q *Queries) GetRecentlyCompletedTasks(ctx context.Context, arg GetRecently
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Dependent,
 		); err != nil {
 			return nil, err
 		}
@@ -328,7 +332,7 @@ func (q *Queries) GetTags(ctx context.Context, arg GetTagsParams) ([]string, err
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at FROM tasks
+SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent FROM tasks
 WHERE id = $1 AND user_id = $2
 LIMIT 1
 `
@@ -356,12 +360,13 @@ func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) 
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }
 
 const getTaskDependencies = `-- name: GetTaskDependencies :many
-SELECT t.id, t.user_id, t.description, t.status, t.priority, t.due_date, t.start_date, t.completed_at, t.project_id, t.recurrence, t.tags, t.notes, t.created_at, t.updated_at FROM tasks t
+SELECT t.id, t.user_id, t.description, t.status, t.priority, t.due_date, t.start_date, t.completed_at, t.project_id, t.recurrence, t.tags, t.notes, t.created_at, t.updated_at, t.dependent FROM tasks t
 JOIN task_dependencies td ON t.id = td.depends_on_id
 WHERE td.task_id = $1 AND t.user_id = $2
 ORDER BY t.created_at DESC
@@ -396,6 +401,7 @@ func (q *Queries) GetTaskDependencies(ctx context.Context, arg GetTaskDependenci
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Dependent,
 		); err != nil {
 			return nil, err
 		}
@@ -408,7 +414,7 @@ func (q *Queries) GetTaskDependencies(ctx context.Context, arg GetTaskDependenci
 }
 
 const getTasksByTag = `-- name: GetTasksByTag :many
-SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at FROM tasks
+SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent FROM tasks
 WHERE user_id = $1
 AND $2 = ANY(tags)
 ORDER BY created_at DESC
@@ -443,6 +449,7 @@ func (q *Queries) GetTasksByTag(ctx context.Context, arg GetTasksByTagParams) ([
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Dependent,
 		); err != nil {
 			return nil, err
 		}
@@ -455,7 +462,7 @@ func (q *Queries) GetTasksByTag(ctx context.Context, arg GetTasksByTagParams) ([
 }
 
 const getTasksWithinDateRange = `-- name: GetTasksWithinDateRange :many
-SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at FROM tasks
+SELECT id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent FROM tasks
 WHERE user_id = $1
 AND (
     (start_date IS NOT NULL AND start_date >= $2 AND start_date <= $3)
@@ -495,6 +502,7 @@ func (q *Queries) GetTasksWithinDateRange(ctx context.Context, arg GetTasksWithi
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Dependent,
 		); err != nil {
 			return nil, err
 		}
@@ -520,6 +528,7 @@ SELECT
     recurrence,
     tags,
     notes,
+    dependent,
     created_at,
     updated_at
 FROM 
@@ -539,7 +548,7 @@ AND (
 )
 AND (
     $5::text[] IS NULL
-    OR tags && $5
+    OR tags = ANY($5)
 )
 ORDER BY
     CASE 
@@ -567,7 +576,25 @@ type ListTasksParams struct {
 	Tags     []string    `json:"tags"`
 }
 
-func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
+type ListTasksRow struct {
+	ID          int32              `json:"id"`
+	UserID      pgtype.Int4        `json:"user_id"`
+	Description string             `json:"description"`
+	Status      string             `json:"status"`
+	Priority    pgtype.Text        `json:"priority"`
+	DueDate     pgtype.Timestamptz `json:"due_date"`
+	StartDate   pgtype.Timestamptz `json:"start_date"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	ProjectID   pgtype.Int4        `json:"project_id"`
+	Recurrence  pgtype.Text        `json:"recurrence"`
+	Tags        []string           `json:"tags"`
+	Notes       pgtype.Text        `json:"notes"`
+	Dependent   pgtype.Int4        `json:"dependent"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error) {
 	rows, err := q.db.Query(ctx, listTasks,
 		arg.UserID,
 		arg.Priority,
@@ -579,9 +606,9 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Task{}
+	items := []ListTasksRow{}
 	for rows.Next() {
-		var i Task
+		var i ListTasksRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -595,6 +622,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 			&i.Recurrence,
 			&i.Tags,
 			&i.Notes,
+			&i.Dependent,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -615,7 +643,7 @@ SET
     start_date = NULL,
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type PauseTaskParams struct {
@@ -641,6 +669,7 @@ func (q *Queries) PauseTask(ctx context.Context, arg PauseTaskParams) (Task, err
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }
@@ -685,7 +714,7 @@ SET
     start_date = NOW(),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type StartTaskParams struct {
@@ -711,6 +740,7 @@ func (q *Queries) StartTask(ctx context.Context, arg StartTaskParams) (Task, err
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }
@@ -733,7 +763,7 @@ SET
         ELSE NULL 
     END
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type UpdateTaskParams struct {
@@ -780,6 +810,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }
@@ -794,7 +825,7 @@ SET
         ELSE completed_at 
     END
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type UpdateTaskStatusParams struct {
@@ -821,6 +852,7 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Dependent,
 	)
 	return i, err
 }

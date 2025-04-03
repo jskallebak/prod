@@ -153,6 +153,7 @@ type Task struct {
 	Notes       pgtype.Text        `json:"notes"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Dependent   pgtype.Int4        `json:"dependent"`
 }
 
 type TaskCalendar struct {

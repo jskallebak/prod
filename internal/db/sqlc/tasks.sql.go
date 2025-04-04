@@ -528,9 +528,9 @@ SELECT
     recurrence,
     tags,
     notes,
-    dependent,
     created_at,
-    updated_at
+    updated_at,
+    dependent
 FROM 
     tasks
 WHERE user_id = $1
@@ -548,7 +548,7 @@ AND (
 )
 AND (
     $5::text[] IS NULL
-    OR tags = ANY($5)
+    OR tags && $5
 )
 ORDER BY
     CASE 
@@ -576,25 +576,7 @@ type ListTasksParams struct {
 	Tags     []string    `json:"tags"`
 }
 
-type ListTasksRow struct {
-	ID          int32              `json:"id"`
-	UserID      pgtype.Int4        `json:"user_id"`
-	Description string             `json:"description"`
-	Status      string             `json:"status"`
-	Priority    pgtype.Text        `json:"priority"`
-	DueDate     pgtype.Timestamptz `json:"due_date"`
-	StartDate   pgtype.Timestamptz `json:"start_date"`
-	CompletedAt pgtype.Timestamptz `json:"completed_at"`
-	ProjectID   pgtype.Int4        `json:"project_id"`
-	Recurrence  pgtype.Text        `json:"recurrence"`
-	Tags        []string           `json:"tags"`
-	Notes       pgtype.Text        `json:"notes"`
-	Dependent   pgtype.Int4        `json:"dependent"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error) {
+func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
 	rows, err := q.db.Query(ctx, listTasks,
 		arg.UserID,
 		arg.Priority,
@@ -606,9 +588,9 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListTasksRow{}
+	items := []Task{}
 	for rows.Next() {
-		var i ListTasksRow
+		var i Task
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -622,9 +604,9 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 			&i.Recurrence,
 			&i.Tags,
 			&i.Notes,
-			&i.Dependent,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Dependent,
 		); err != nil {
 			return nil, err
 		}

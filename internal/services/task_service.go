@@ -206,9 +206,8 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 	}
 
 	tasks, err := s.queries.ListTasks(ctx, params)
-	fmt.Println("AABB", tags)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tasks: %w", err)
+		return nil, fmt.Errorf("failed ListTasks query: %w", err)
 	}
 	return tasks, nil
 }

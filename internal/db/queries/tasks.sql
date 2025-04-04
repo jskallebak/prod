@@ -34,9 +34,9 @@ SELECT
     recurrence,
     tags,
     notes,
-    dependent,
     created_at,
-    updated_at
+    updated_at,
+    dependent
 FROM 
     tasks
 WHERE user_id = $1
@@ -54,7 +54,7 @@ AND (
 )
 AND (
     sqlc.narg(tags)::text[] IS NULL
-    OR tags = ANY(sqlc.narg(tags))
+    OR tags && sqlc.narg(tags)
 )
 ORDER BY
     CASE 

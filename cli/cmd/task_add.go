@@ -155,5 +155,5 @@ func init() {
 	addCmd.Flags().IntVarP(&taskProjectID, "project", "P", 0, "Project ID")
 	addCmd.Flags().StringSliceVarP(&taskTags, "tags", "t", []string{}, "Task tags (comma-separated)")
 	addCmd.Flags().StringVar(&taskNotes, "notes", "", "Additional notes for the task")
-	addCmd.Flags().StringVarP(&dependent, "dependensive", "d", "", "Makes a sub task of a task")
+	addCmd.Flags().StringVarP(&dependent, "subtask", "s", "", "Makes a sub task of a task")
 }

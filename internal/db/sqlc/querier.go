@@ -41,7 +41,7 @@ type Querier interface {
 	GetUser(ctx context.Context, email string) (User, error)
 	ListPomodoroSessions(ctx context.Context, arg ListPomodoroSessionsParams) ([]PomodoroSession, error)
 	ListProjects(ctx context.Context, userID pgtype.Int4) ([]Project, error)
-	ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTasksRow, error)
+	ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error)
 	PausePomodoroSession(ctx context.Context, arg PausePomodoroSessionParams) (PomodoroSession, error)
 	PauseTask(ctx context.Context, arg PauseTaskParams) (Task, error)
 	RemoveTaskDependency(ctx context.Context, arg RemoveTaskDependencyParams) error

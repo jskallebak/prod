@@ -44,18 +44,14 @@ This is primarily used for development and debugging purposes.`,
 			fmt.Printf("Name: %s\n", user.Name.String)
 		}
 
-		taskMap, err := getTaskMap()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		// taskMap, err := getTaskMap()
+		// if err != nil {
+		// 	fmt.Println(err)
+		// 	return
+		// }
 
-		tags, err := taskS.GetTags(context.Background(), user.ID, taskMap[10])
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Println(tags)
+		fmt.Println(taskS.GetToday(context.Background(), user.ID))
+
 	},
 }
 

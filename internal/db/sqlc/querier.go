@@ -38,6 +38,7 @@ type Querier interface {
 	GetTaskDependencies(ctx context.Context, arg GetTaskDependenciesParams) ([]Task, error)
 	GetTasksByTag(ctx context.Context, arg GetTasksByTagParams) ([]Task, error)
 	GetTasksWithinDateRange(ctx context.Context, arg GetTasksWithinDateRangeParams) ([]Task, error)
+	GetToday(ctx context.Context, userID pgtype.Int4) ([]Task, error)
 	GetUser(ctx context.Context, email string) (User, error)
 	ListPomodoroSessions(ctx context.Context, arg ListPomodoroSessionsParams) ([]PomodoroSession, error)
 	ListProjects(ctx context.Context, userID pgtype.Int4) ([]Project, error)
@@ -49,6 +50,7 @@ type Querier interface {
 	ResumePomodoroSession(ctx context.Context, arg ResumePomodoroSessionParams) (PomodoroSession, error)
 	SetActiveProject(ctx context.Context, arg SetActiveProjectParams) error
 	SetTags(ctx context.Context, arg SetTagsParams) error
+	SetToday(ctx context.Context, arg SetTodayParams) (Task, error)
 	StartTask(ctx context.Context, arg StartTaskParams) (Task, error)
 	StopPomodoroSession(ctx context.Context, arg StopPomodoroSessionParams) (PomodoroSession, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)

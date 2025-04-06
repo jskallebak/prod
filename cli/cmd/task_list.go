@@ -25,6 +25,7 @@ var (
 	debugMode     bool
 	showCompleted bool
 	showAll       bool
+	showToday     bool
 )
 
 var listCmd = &cobra.Command{
@@ -85,6 +86,11 @@ Priority levels:
 			}
 		}
 
+		// Handle Today falg
+		if cmd.Flags().Changed("today") {
+
+		}
+
 		if cmd.Flags().Changed("tag") {
 
 		}
@@ -127,7 +133,7 @@ Priority levels:
 			}
 		}
 
-		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, tagsList, status)
+		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, tagsList, status, showToday)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return
@@ -254,6 +260,8 @@ func init() {
 	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all tasks (including completed)")
 
 	listCmd.Flags().BoolVarP(&showCompleted, "completed", "c", false, "Show completed tasks")
+
+	listCmd.Flags().BoolVar(&showToday, "today", false, "Show tasks for today")
 
 	// Here you will define your flags and configuration settings.
 

@@ -56,6 +56,10 @@ AND (
     sqlc.narg(tags)::text[] IS NULL
     OR tags && sqlc.narg(tags)
 )
+AND (
+    NOT sqlc.narg(today_filter)::boolean IS TRUE
+    OR DATE(start_date) = CURRENT_DATE
+)
 ORDER BY
     CASE 
         WHEN status = 'completed' THEN 0 
@@ -224,3 +228,15 @@ UPDATE tasks
 SET
     tags = $3
 WHERE id = $1 AND user_id = $2;
+
+-- name: SetToday :one
+UPDATE tasks
+SET
+    start_date = TODAY()
+WHERE id = $1 AND user_id = $2
+RETURNING *;
+
+-- name: GetToday :many
+SELECT * FROM tasks
+WHERE user_id = $1 AND start_date >= CURRENT_DATE;
+

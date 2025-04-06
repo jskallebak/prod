@@ -171,7 +171,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int
 }
 
 // ListTasks retrieves tasks with optional filtering
-func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string, tags []string, status []string) ([]sqlc.Task, error) {
+func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string, tags []string, status []string, today bool) ([]sqlc.Task, error) {
 	// Create params object with userID being mandatory
 	params := sqlc.ListTasksParams{
 		UserID: pgtype.Int4{
@@ -203,6 +203,13 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 
 	if len(tags) > 0 {
 		params.Tags = tags
+	}
+
+	if today {
+		params.TodayFilter = pgtype.Bool{
+			Bool:  true,
+			Valid: true,
+		}
 	}
 
 	tasks, err := s.queries.ListTasks(ctx, params)
@@ -324,4 +331,16 @@ func (s *TaskService) RemoveTags(ctx context.Context, userID, taskID int32, tags
 	}
 
 	return nil
+}
+
+func (s *TaskService) GetToday(ctx context.Context, userID int32) ([]sqlc.Task, error) {
+	user := pgtype.Int4{
+		Int32: userID,
+		Valid: true,
+	}
+	tasks, err := s.queries.GetToday(ctx, user)
+	if err != nil {
+		return nil, fmt.Errorf("failed GetToday query: %w", err)
+	}
+	return tasks, nil
 }

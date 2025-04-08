@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
@@ -105,42 +103,10 @@ Priority levels:
 			status = []string{"pending", "active", "completed"}
 		}
 
-		//TODO: remove when done with list.go
-		if debugMode {
-			fmt.Printf("Debug: Querying tasks for user ID: %d\n", user.ID)
-			if priorityPtr != nil {
-				fmt.Printf("Debug: Filtering by priority: %s\n", *priorityPtr)
-			}
-			if len(status) > 0 {
-				fmt.Printf("Debug: Filtering by status: %s\n", status)
-			}
-
-			// Print DB connection info
-			fmt.Printf("Debug: Database connection e/ tablished: %v\n", dbpool != nil)
-
-			// Print SQL query test
-			countTest, err := queries.CountTasks(context.Background(), sqlc.CountTasksParams{
-				UserID: pgtype.Int4{
-					Int32: int32(user.ID),
-					Valid: true,
-				},
-			})
-			if err != nil {
-				fmt.Printf("Debug: Error running test query: %v\n", err)
-			} else {
-				fmt.Printf("Debug: Database has %d total tasks, %d pending, %d completed\n",
-					countTest.TotalTasks, countTest.PendingTasks, countTest.CompletedTasks)
-			}
-		}
-
 		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, tagsList, status, showToday)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return
-		}
-
-		if debugMode {
-			fmt.Printf("Debug: Query returned %d tasks\n", len(tasks))
 		}
 
 		if len(tasks) == 0 {
@@ -168,76 +134,12 @@ Priority levels:
 			fmt.Println("Pending tasks:")
 		}
 
-		taskMap := map[int]int32{}
+		sl := SortTaskList(tasks)
+		// fmt.Println(sl)
 
-		for i, task := range tasks {
-			// Show task status with checkbox
-			status := "[ ]"
-			if task.CompletedAt.Valid {
-				status = "[✓]"
-			}
-			coloredDescription := coloredText(ColorGreen, task.Description)
-			fmt.Printf("%s #%d %d %s\n", status, i+1, task.ID, coloredDescription)
+		ProcessList(sl, queries, user)
 
-			// Show task details with emojis and consistent formatting
-			if task.Status == "active" {
-				fmt.Printf("    🎯\tStatus: %s\n", coloredText(ColorBrightCyan, task.Status)) // Target/goal
-			} else {
-				fmt.Printf("    🎯\tStatus: %s\n", task.Status) // Target/goal
-			}
-			if task.CompletedAt.Valid {
-				fmt.Printf("    ✅\tCompleted: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
-			}
-			if task.Priority.Valid {
-				// Convert priority letter to full name
-				priorityName := "Unknown"
-				switch task.Priority.String {
-				case "H":
-					priorityName = coloredText(ColorRed, "High")
-				case "M":
-					priorityName = coloredText(ColorYellow, "Medium")
-				case "L":
-					priorityName = coloredText(ColorGreen, "Low")
-				}
-				fmt.Printf("    🔄\tPriority: %s\n", priorityName)
-			} else {
-				fmt.Printf("    🔄\tPriority: --\n")
-			}
-			if task.ProjectID.Valid {
-				// Get project name instead of just showing the ID
-				projectService := services.NewProjectService(queries)
-				project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, user.ID)
-				if err == nil && project != nil {
-					fmt.Printf("    📁\tProject: %s\n", project.Name)
-				} else {
-					fmt.Printf("    📁\tProject: ID %d\n", task.ProjectID.Int32)
-				}
-			}
-			// else {
-			// 	fmt.Printf("    📁\tProject: --\n")
-			// }
-			if task.StartDate.Valid {
-				fmt.Printf("    📅\tStarted at: %s\n", task.StartDate.Time.Format("Mon, Jan 2, 2006"))
-			}
-			// else {
-			// 	fmt.Printf("    📅\tStarted at: --\n")
-			// }
-			if task.DueDate.Valid {
-				fmt.Printf("    📅\tDue: %s\n", task.DueDate.Time.Format("Mon, Jan 2, 2006"))
-			}
-			// else {
-			// 	fmt.Printf("    📅\tDue: --\n")
-			// }
-			if len(task.Tags) > 0 {
-				fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
-			}
-			// else {
-			// 	fmt.Printf("    🏷️\tTags: --\n")
-			// }
-
-			taskMap[i+1] = task.ID
-		}
-
+		taskMap := MakeTaskMap(sl)
 		makeTaskMapFile(taskMap)
 	},
 }

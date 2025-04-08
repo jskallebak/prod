@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/jskallebak/prod/internal/db/sqlc"
+	"github.com/jskallebak/prod/internal/services"
 )
 
 // formatDuration formats a duration in a human-readable format (e.g., "25m 30s")
@@ -178,4 +183,159 @@ func findHighestKey(m map[int]int32) (int, error) {
 	}
 
 	return highestKey, nil
+}
+
+func ProcessList(list []sqlc.Task, q *sqlc.Queries, u *sqlc.User) {
+	indent := ""
+
+	for i, item := range list {
+		if item.Dependent.Valid {
+			fmt.Println("    ↳")
+			indent = "        "
+		} else {
+			indent = ""
+		}
+
+		// Show task status with checkbox
+		status := "[ ]"
+		if item.CompletedAt.Valid {
+			status = "[✓]"
+		}
+		coloredDescription := coloredText(ColorGreen, item.Description)
+		fmt.Printf("%s #%d %d %s\n", status, i+1, item.ID, coloredDescription)
+
+		// Show task details with emojis and consistent formatting
+		if item.Status == "active" {
+			fmt.Printf("    %s🎯 Status: %s\n", indent, coloredText(ColorBrightCyan, item.Status)) // Target/goal
+		} else {
+			fmt.Printf("    %s🎯 Status: %s\n", indent, item.Status) // Target/goal
+		}
+		if item.CompletedAt.Valid {
+			fmt.Printf("    %s✅ Completed: %s\n", indent, item.CompletedAt.Time.Format("2006-01-02 15:04"))
+		}
+		if item.Priority.Valid {
+			// Convert priority letter to full name
+			priorityName := "Unknown"
+			switch item.Priority.String {
+			case "H":
+				priorityName = coloredText(ColorRed, "High")
+			case "M":
+				priorityName = coloredText(ColorYellow, "Medium")
+			case "L":
+				priorityName = coloredText(ColorGreen, "Low")
+			}
+			fmt.Printf("    %s🔄 Priority: %s\n", indent, priorityName)
+		} else {
+			fmt.Printf("    %s🔄 Priority: --\n", indent)
+		}
+		if item.ProjectID.Valid {
+			// Get project name instead of just showing the ID
+			projectService := services.NewProjectService(q)
+			project, err := projectService.GetProject(context.Background(), item.ProjectID.Int32, u.ID)
+			if err == nil && project != nil {
+				fmt.Printf("    %s📁 Project: %s\n", indent, project.Name)
+			} else {
+				fmt.Printf("    %s📁 Project: ID %d\n", indent, item.ProjectID.Int32)
+			}
+		}
+		// else {
+		// 	fmt.Printf("    📁\tProject: --\n")
+		// }
+		if item.StartDate.Valid {
+			fmt.Printf("    %s📅 Started at: %s\n", indent, item.StartDate.Time.Format("Mon, Jan 2, 2006"))
+		}
+		// else {
+		// 	fmt.Printf("\t📅 Started at: --\n")
+		// }
+		if item.DueDate.Valid {
+			fmt.Printf("    %s📅 Due: %s\n", indent, item.DueDate.Time.Format("Mon, Jan 2, 2006"))
+		}
+		// else {
+		// 	fmt.Printf("\t📅 Due: --\n")
+		// }
+		if len(item.Tags) > 0 {
+			fmt.Printf("    %s🏷️ Tags: %s\n", indent, strings.Join(item.Tags, ", "))
+		}
+		// else {
+		// 	fmt.Printf("\t🏷️ Tags: --\n")
+		// }
+
+		taskMap := MakeTaskMap(list)
+		reverseMap := ReverseMap(taskMap)
+
+		if true {
+			index, exits := reverseMap[item.Dependent.Int32]
+			if exits {
+				fmt.Printf("    %s🔗Dependent: %d\n", indent, index)
+			}
+		}
+	}
+}
+
+func SortTaskList(taskList []sqlc.Task) []sqlc.Task {
+	subtaskMap := MakeSubtaskMap(taskList)
+	sortedList := []sqlc.Task{}
+
+	counter := 0
+
+	for _, task := range taskList {
+		if task.Dependent.Valid {
+			// fmt.Println(i)
+			continue
+		}
+
+		sortedList = append(sortedList, task)
+		// fmt.Println(i)
+
+		// Make a dict with subtasks, if the current task are in the dict, append them
+		subtasks, exits := subtaskMap[task.ID]
+		if exits {
+			for _, subtask := range subtasks {
+				task, err := findTask(taskList, int32(subtask))
+				if err != nil {
+					continue
+				}
+
+				sortedList = append(sortedList, task)
+			}
+		}
+		counter += 1
+
+	}
+	return sortedList
+}
+
+func MakeTaskMap(taskList []sqlc.Task) map[int]int32 {
+	taskMap := make(map[int]int32)
+	for i, task := range taskList {
+		taskMap[i+1] = task.ID
+	}
+	return taskMap
+}
+
+func ReverseMap[K comparable, V comparable](m map[K]V) map[V]K {
+	reversed := make(map[V]K, len(m))
+	for key, value := range m {
+		reversed[value] = key
+	}
+	return reversed
+}
+
+func MakeSubtaskMap(taskList []sqlc.Task) map[int32][]int32 {
+	subtaskMap := make(map[int32][]int32)
+	for _, task := range taskList {
+		if task.Dependent.Valid {
+			subtaskMap[task.Dependent.Int32] = append(subtaskMap[task.Dependent.Int32], task.ID)
+		}
+	}
+	return subtaskMap
+}
+
+func findTask(taskList []sqlc.Task, taskID int32) (sqlc.Task, error) {
+	for _, task := range taskList {
+		if task.ID == taskID {
+			return task, nil
+		}
+	}
+	return sqlc.Task{}, errors.New("could not find the task in list")
 }

@@ -20,7 +20,7 @@ var (
 	taskProjectID int
 	taskTags      []string
 	taskNotes     string
-	dependent     string
+	dependent     int
 )
 
 // addCmd represents the add command
@@ -61,6 +61,14 @@ For example:
 			fmt.Fprintf(os.Stderr, "Error getting the user: %v\n", err)
 		}
 
+		taskMap, err := getTaskMap()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// reverseTaskMap := ReverseMap(taskMap)
+
 		params := services.TaskParams{
 			Description: description,
 			Tags:        taskTags,
@@ -98,6 +106,17 @@ For example:
 			params.Priority = &uppercasePriority
 		}
 
+		// add dependent if provided
+		if cmd.Flags().Changed("subtask") {
+			// converting input to DB id for foreign-key
+			dbIndex, exits := taskMap[dependent]
+			if exits {
+				params.Dependent = int32(dbIndex)
+			} else {
+				params.Dependent = int32(0)
+			}
+		}
+
 		// Add project ID if provided
 		if cmd.Flags().Changed("project") && taskProjectID > 0 {
 			projectID := int32(taskProjectID)
@@ -121,12 +140,6 @@ For example:
 			return
 		}
 
-		taskMap, err := getTaskMap()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
 		fmt.Println(taskMap)
 
 		taskMap, index, err := appendToMap(taskMap, task.ID)
@@ -141,7 +154,7 @@ For example:
 			return
 		}
 
-		fmt.Printf("Created task: %s (ID: %d)\n", description, index)
+		fmt.Printf("Created task: %s (ID: %d) (dbID: %d)\n", description, index, task.ID)
 		fmt.Printf("Created at: %s\n", task.CreatedAt.Time.Format("2006-01-02 15:04"))
 	},
 }
@@ -155,5 +168,5 @@ func init() {
 	addCmd.Flags().IntVarP(&taskProjectID, "project", "P", 0, "Project ID")
 	addCmd.Flags().StringSliceVarP(&taskTags, "tags", "t", []string{}, "Task tags (comma-separated)")
 	addCmd.Flags().StringVar(&taskNotes, "notes", "", "Additional notes for the task")
-	addCmd.Flags().StringVarP(&dependent, "subtask", "s", "", "Makes a sub task of a task")
+	addCmd.Flags().IntVarP(&dependent, "subtask", "s", 0, "Makes a sub task of a task")
 }

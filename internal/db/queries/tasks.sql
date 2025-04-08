@@ -9,9 +9,10 @@ INSERT INTO tasks (
     project_id,
     recurrence,
     tags,
-    notes
+    notes, 
+    dependent
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 ) RETURNING *;
 
 -- name: GetTask :one
@@ -58,7 +59,7 @@ AND (
 )
 AND (
     NOT sqlc.narg(today_filter)::boolean IS TRUE
-    OR DATE(start_date) = CURRENT_DATE
+    OR DATE(start_date) <= CURRENT_DATE
 )
 ORDER BY
     CASE 

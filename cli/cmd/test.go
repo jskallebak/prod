@@ -50,7 +50,15 @@ This is primarily used for development and debugging purposes.`,
 		// 	return
 		// }
 
-		fmt.Println(taskS.GetToday(context.Background(), user.ID))
+		tasks, err := taskS.ListTasks(context.Background(), user.ID, nil, nil, nil, nil, false)
+		if err != nil {
+
+		}
+
+		_ = MakeTaskMap(tasks)
+
+		//list := SortTaskList(tasks)
+		fmt.Println(MakeSubtaskMap(tasks))
 
 	},
 }

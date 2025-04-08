@@ -149,9 +149,10 @@ INSERT INTO tasks (
     project_id,
     recurrence,
     tags,
-    notes
+    notes, 
+    dependent
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 ) RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
@@ -166,6 +167,7 @@ type CreateTaskParams struct {
 	Recurrence  pgtype.Text        `json:"recurrence"`
 	Tags        []string           `json:"tags"`
 	Notes       pgtype.Text        `json:"notes"`
+	Dependent   pgtype.Int4        `json:"dependent"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
@@ -180,6 +182,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		arg.Recurrence,
 		arg.Tags,
 		arg.Notes,
+		arg.Dependent,
 	)
 	var i Task
 	err := row.Scan(
@@ -593,7 +596,7 @@ AND (
 )
 AND (
     NOT $6::boolean IS TRUE
-    OR DATE(start_date) = CURRENT_DATE
+    OR DATE(start_date) <= CURRENT_DATE
 )
 ORDER BY
     CASE 

@@ -33,6 +33,7 @@ type TaskParams struct {
 	Tags        []string
 	Notes       *string
 	Recurrence  *string
+	Dependent   int32
 }
 
 // CreateTask creates a new task with minimal required parameters
@@ -96,6 +97,13 @@ func (s *TaskService) CreateTask(ctx context.Context, userID int32, params TaskP
 		createParams.Recurrence = pgtype.Text{
 			String: *params.Recurrence,
 			Valid:  true,
+		}
+	}
+
+	if params.Dependent != 0 {
+		createParams.Dependent = pgtype.Int4{
+			Int32: params.Dependent,
+			Valid: true,
 		}
 	}
 
@@ -204,6 +212,7 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 	if len(tags) > 0 {
 		params.Tags = tags
 	}
+	fmt.Println(today)
 
 	if today {
 		params.TodayFilter = pgtype.Bool{

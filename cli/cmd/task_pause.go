@@ -49,7 +49,7 @@ to quickly create a Cobra application.`,
 
 		task, err := taskService.PauseTask(context.Background(), int32(taskID), user.ID)
 
-		fmt.Printf("Task %d marked as pending\n", input)
+		fmt.Printf("Task %s marked as pending\n", input)
 		fmt.Printf("Description: %s\n", task.Description)
 		fmt.Printf("updated at: %s\n", task.UpdatedAt.Time.Format("2006-01-02 15:04:05"))
 

@@ -44,21 +44,26 @@ This is primarily used for development and debugging purposes.`,
 			fmt.Printf("Name: %s\n", user.Name.String)
 		}
 
-		// taskMap, err := getTaskMap()
-		// if err != nil {
-		// 	fmt.Println(err)
-		// 	return
-		// }
-
-		tasks, err := taskS.ListTasks(context.Background(), user.ID, nil, nil, nil, nil, false)
+		taskMap, err := getTaskMap()
 		if err != nil {
-
+			fmt.Println(err)
+			return
 		}
 
-		_ = MakeTaskMap(tasks)
+		input, _ := taskMap[2]
 
-		//list := SortTaskList(tasks)
-		fmt.Println(MakeSubtaskMap(tasks))
+		task, err := taskS.GetTask(context.Background(), input, user.ID)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		ctx := context.Background()
+
+		tasks, err := taskS.ListTasks(ctx, user.ID, nil, nil, nil, nil, false)
+
+		tasks, _ = taskS.GetDependent(context.Background(), user.ID, task.ID)
+
+		fmt.Println(len(tasks))
 
 	},
 }

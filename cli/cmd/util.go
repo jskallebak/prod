@@ -202,7 +202,7 @@ func ProcessList(list []sqlc.Task, q *sqlc.Queries, u *sqlc.User) {
 			status = "[✓]"
 		}
 		coloredDescription := coloredText(ColorGreen, item.Description)
-		fmt.Printf("%s #%d %d %s\n", status, i+1, item.ID, coloredDescription)
+		fmt.Printf("%s%s #%d %d %s\n", indent, status, i+1, item.ID, coloredDescription)
 
 		// Show task details with emojis and consistent formatting
 		if item.Status == "active" {
@@ -266,7 +266,7 @@ func ProcessList(list []sqlc.Task, q *sqlc.Queries, u *sqlc.User) {
 		if true {
 			index, exits := reverseMap[item.Dependent.Int32]
 			if exits {
-				fmt.Printf("    %s🔗Dependent: %d\n", indent, index)
+				fmt.Printf("    %s🔗 Dependent: %d\n", indent, index)
 			}
 		}
 	}
@@ -338,4 +338,23 @@ func findTask(taskList []sqlc.Task, taskID int32) (sqlc.Task, error) {
 		}
 	}
 	return sqlc.Task{}, errors.New("could not find the task in list")
+}
+
+func ConfirmCmd(ctx context.Context, input string, taskID, userID int32, name string, ts *services.TaskService) error {
+	// Get task info for confirmation
+	task, err := ts.GetTask(ctx, int32(taskID), userID)
+	if err != nil {
+		return fmt.Errorf("Error: Failed to find task with ID %d: %v", taskID, err)
+	}
+
+	// Confirm deletion unless --yes flag is used
+	fmt.Printf("You are about to %s task %s: \"%s\"\n", name, input, task.Description)
+	fmt.Print("Are you sure? (y/N): ")
+	var confirmation string
+	fmt.Scanln(&confirmation)
+	if confirmation != "y" && confirmation != "Y" {
+		return errors.New("complete cancelled")
+	}
+	return nil
+
 }

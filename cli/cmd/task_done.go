@@ -46,6 +46,12 @@ For example:
 			return
 		}
 
+		err = ConfirmCmd(context.Background(), input, taskID, user.ID, COMPLETE, taskService)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return
+		}
+
 		// Complete the task
 		completedTask, err := taskService.CompleteTask(context.Background(), taskID, user.ID)
 		if err != nil {

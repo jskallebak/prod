@@ -50,6 +50,12 @@ to quickly create a Cobra application.`,
 			return
 		}
 
+		err = ConfirmCmd(context.Background(), input, taskID, user.ID, START, taskService)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return
+		}
+
 		task, err := taskService.StartTask(context.Background(), taskID, user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "No tasks with ID %v\n", taskID)

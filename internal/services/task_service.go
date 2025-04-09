@@ -212,7 +212,6 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 	if len(tags) > 0 {
 		params.Tags = tags
 	}
-	fmt.Println(today)
 
 	if today {
 		params.TodayFilter = pgtype.Bool{
@@ -352,4 +351,25 @@ func (s *TaskService) GetToday(ctx context.Context, userID int32) ([]sqlc.Task, 
 		return nil, fmt.Errorf("failed GetToday query: %w", err)
 	}
 	return tasks, nil
+}
+
+func (s TaskService) GetDependent(ctx context.Context, userID int32, taskID int32) ([]sqlc.Task, error) {
+	tasks, err := s.ListTasks(ctx, userID, nil, nil, nil, nil, false)
+	if err != nil {
+		return nil, err
+	}
+
+	task, err := s.GetTask(ctx, taskID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("GetDependent: error getting the task: %w", err)
+	}
+
+	result := []sqlc.Task{}
+	for _, t := range tasks {
+		if t.Dependent.Int32 == task.ID {
+			result = append(result, t)
+		}
+	}
+
+	return result, nil
 }

@@ -47,7 +47,17 @@ to quickly create a Cobra application.`,
 			return
 		}
 
+		err = ConfirmCmd(context.Background(), input, taskID, user.ID, PAUSE, taskService)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return
+		}
+
 		task, err := taskService.PauseTask(context.Background(), int32(taskID), user.ID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
+			return
+		}
 
 		fmt.Printf("Task %s marked as pending\n", input)
 		fmt.Printf("Description: %s\n", task.Description)

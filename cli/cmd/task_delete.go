@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
@@ -24,14 +25,12 @@ For example:
   prod task delete 5 --yes   # Deletes without confirmation`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
 		// Parse task ID from arguments
 		input := args[0]
 		taskID, err := getID(getTaskMap, input)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
 			return
 		}
 
@@ -50,30 +49,42 @@ For example:
 
 		user, err := authService.GetCurrentUser(context.Background())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to get user %v", err)
-		}
-
-		// Get task info for confirmation
-		task, err := taskService.GetTask(context.Background(), int32(taskID), user.ID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
+			fmt.Fprintf(os.Stderr, "Failed to get user %v\n", err)
 			return
 		}
 
-		// Confirm deletion unless --yes flag is used
-		if !confirmDelete {
-			fmt.Printf("You are about to delete task %s: \"%s\"\n", input, task.Description)
-			fmt.Print("Are you sure? (y/N): ")
-			var confirmation string
-			fmt.Scanln(&confirmation)
-			if confirmation != "y" && confirmation != "Y" {
-				fmt.Println("Deletion cancelled")
-				return
+		subtasks, err := taskService.GetDependent(ctx, user.ID, taskID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return
+		}
+
+		if len(subtasks) != 0 {
+			fmt.Println("The task have subtask(s), confirm to delete them")
+			for _, st := range subtasks {
+				id := strconv.Itoa(int(st.ID))
+				err = ConfirmCmd(ctx, id, st.ID, user.ID, DELETE, taskService)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					return
+				}
+
+				err = taskService.DeleteTask(ctx, st.ID, user.ID)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error deleting task: %v\n", err)
+					return
+				}
+				fmt.Printf("Task %s deleted successfully\n", input)
 			}
 		}
 
-		// Delete the task
-		err = taskService.DeleteTask(context.Background(), int32(taskID), user.ID)
+		err = ConfirmCmd(ctx, input, taskID, user.ID, DELETE, taskService)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return
+		}
+
+		err = taskService.DeleteTask(ctx, int32(taskID), user.ID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error deleting task: %v\n", err)
 			return

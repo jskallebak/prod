@@ -142,6 +142,13 @@ Available flags:
 			updateParams.Status = editStatus
 
 		}
+
+		err = ConfirmCmd(context.Background(), input, taskID, user.ID, EDIT, taskService)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return
+		}
+
 		// Call the service to update the task
 		updatedTask, err := queries.UpdateTask(context.Background(), updateParams)
 		if err != nil {

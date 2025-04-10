@@ -30,11 +30,13 @@ Type 'prod help' for a list of available commands.`,
 		token, err := auth.ReadToken()
 		if err != nil {
 			fmt.Println("Status: Not logged in. Run 'prod login' to authenticate.")
+			return
 		} else {
 			// Verify token and get user info
 			claim, err := auth.VerifyJWT(token)
 			if err != nil {
 				fmt.Println("Status: Authentication token expired or invalid. Run 'prod login' to re-authenticate.")
+				return
 			} else {
 				// Get user email from claims
 				fmt.Printf("Status: Logged in as %s\n", claim.Email)

@@ -21,6 +21,7 @@ var (
 	taskTags      []string
 	taskNotes     string
 	dependent     int
+	interactive   bool
 )
 
 // addCmd represents the add command
@@ -33,12 +34,6 @@ For example:
   prod task add "Make breakfast"
   prod task add "Finish report" --priority=H --due=2025-04-01 --project=2 --tags=work,urgent`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			fmt.Println("Error: Task description is required")
-			cmd.Help()
-			return
-		}
-
 		// Combine all arguments into a single task description
 		description := strings.Join(args, " ")
 
@@ -64,6 +59,17 @@ For example:
 		taskMap, err := getTaskMap()
 		if err != nil {
 			fmt.Println(err)
+			return
+		}
+
+		if interactive {
+			IMode(user, taskService)
+			return
+		}
+
+		if len(args) == 0 {
+			fmt.Println("Error: Task description is required")
+			cmd.Help()
 			return
 		}
 
@@ -154,7 +160,7 @@ For example:
 			return
 		}
 
-		fmt.Printf("Created task: %s (ID: %d) (dbID: %d)\n", description, index, task.ID)
+		fmt.Printf("Created task: %s (ID: %d) (dbID: %s)\n", description, index, task.ID)
 		fmt.Printf("Created at: %s\n", task.CreatedAt.Time.Format("2006-01-02 15:04"))
 	},
 }
@@ -169,4 +175,89 @@ func init() {
 	addCmd.Flags().StringSliceVarP(&taskTags, "tags", "t", []string{}, "Task tags (comma-separated)")
 	addCmd.Flags().StringVar(&taskNotes, "notes", "", "Additional notes for the task")
 	addCmd.Flags().IntVarP(&dependent, "subtask", "s", 0, "Makes a sub task of a task")
+	addCmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive add")
+}
+
+func IMode(user *sqlc.User, ts *services.TaskService) {
+	params := services.TaskParams{}
+	var description string
+
+	for description == "" {
+		fmt.Printf("Enter description: ")
+		fmt.Scanln(&description)
+		if description == "" {
+			fmt.Println("Must enter a description. (ctrl-c to exit)")
+		}
+	}
+	params.Description = description
+
+	var priority string
+	fmt.Printf("Enter priority (H, M, L), leave blank for none: ")
+	fmt.Scanln(&priority)
+	if priority != "" {
+		priority := strings.ToUpper(priority)
+		params.Priority = &priority
+	}
+
+	var project int32
+	fmt.Printf("Enter project ID, leave black for none: ")
+	fmt.Scanln(&project)
+	if project != 0 {
+		params.ProjectID = &project
+	}
+
+	var subtask int
+	fmt.Printf("If this task is gonna be subtask, enter ID of main task: ")
+	fmt.Scanln(&subtask)
+	if subtask != 0 {
+		taskMap, err := getTaskMap()
+		if err != nil {
+			fmt.Println("error getting task map.")
+			return
+		}
+
+		taskID, exits := taskMap[subtask]
+		for !exits {
+			fmt.Println("No task with ID, enter again. (leave empty to skip)")
+			fmt.Scanln(&subtask)
+			taskID, exits = taskMap[subtask]
+		}
+
+		params.Dependent = taskID
+	}
+
+	var tags []string
+	var tagsString string
+	fmt.Printf("Enter tag(s): ")
+	fmt.Scanln(&tagsString)
+	tags = strings.Split(tagsString, " ")
+
+	params.Tags = tags
+
+	taskMap, err := getTaskMap()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err)
+		return
+	}
+
+	task, err := ts.CreateTask(context.Background(), user.ID, params)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating task: %v\n", err)
+		return
+	}
+
+	taskMap, index, err := appendToMap(taskMap, task.ID)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = makeTaskMapFile(taskMap)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Printf("Created task: %s (ID: %d) (dbID: %s)\n", description, index, task.ID)
+	fmt.Printf("Created at: %s\n", task.CreatedAt.Time.Format("2006-01-02 15:04"))
 }

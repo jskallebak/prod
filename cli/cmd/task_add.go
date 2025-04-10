@@ -146,8 +146,6 @@ For example:
 			return
 		}
 
-		fmt.Println(taskMap)
-
 		taskMap, index, err := appendToMap(taskMap, task.ID)
 		if err != nil {
 			fmt.Println(err)
@@ -173,7 +171,7 @@ func init() {
 	addCmd.Flags().StringVarP(&taskDueDate, "due", "d", "", "Due date (YYYY-MM-DD)")
 	addCmd.Flags().IntVarP(&taskProjectID, "project", "P", 0, "Project ID")
 	addCmd.Flags().StringSliceVarP(&taskTags, "tags", "t", []string{}, "Task tags (comma-separated)")
-	addCmd.Flags().StringVar(&taskNotes, "notes", "", "Additional notes for the task")
+	addCmd.Flags().StringVarP(&taskNotes, "notes", "n", "", "Additional notes for the task")
 	addCmd.Flags().IntVarP(&dependent, "subtask", "s", 0, "Makes a sub task of a task")
 	addCmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive add")
 }

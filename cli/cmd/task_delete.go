@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
@@ -23,16 +22,11 @@ var deleteTaskCmd = &cobra.Command{
 For example:
   prod task delete 5         # Prompts for confirmation
   prod task delete 5 --yes   # Deletes without confirmation`,
-	Args: cobra.ExactArgs(1),
+	// Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 		// Parse task ID from arguments
-		input := args[0]
-		taskID, err := getID(getTaskMap, input)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
-		}
+		inputs, err := ParseArgs(args)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -53,44 +47,54 @@ For example:
 			return
 		}
 
-		subtasks, err := taskService.GetDependent(ctx, user.ID, taskID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			return
-		}
+		for _, input := range inputs {
+			taskID, err := getID(getTaskMap, input)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return
+			}
 
-		if len(subtasks) != 0 {
-			fmt.Println("The task have subtask(s), confirm to delete them")
-			for _, st := range subtasks {
-				id := strconv.Itoa(int(st.ID))
-				err = ConfirmCmd(ctx, id, st.ID, user.ID, DELETE, taskService)
+			subtasks, err := taskService.GetDependent(ctx, user.ID, taskID)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				return
+			}
+
+			if len(subtasks) != 0 {
+				fmt.Println("The task have subtask(s), confirm to delete them")
+				for _, st := range subtasks {
+					err = ConfirmCmd(ctx, int(st.ID), st.ID, user.ID, DELETE, taskService)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "%s\n", err)
+						return
+					}
+
+					err = taskService.DeleteTask(ctx, st.ID, user.ID)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "task_delete: Error deleting task: %v\n", err)
+						return
+					}
+					fmt.Printf("Task %d deleted successfully\n", input)
+				}
+			}
+
+			if !confirmDelete {
+
+				err = ConfirmCmd(ctx, input, taskID, user.ID, DELETE, taskService)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
 					return
 				}
-
-				err = taskService.DeleteTask(ctx, st.ID, user.ID)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error deleting task: %v\n", err)
-					return
-				}
-				fmt.Printf("Task %s deleted successfully\n", input)
 			}
-		}
 
-		err = ConfirmCmd(ctx, input, taskID, user.ID, DELETE, taskService)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			return
-		}
+			err = taskService.DeleteTask(ctx, int32(taskID), user.ID)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "task_delete: Error deleting task: %v\n", err)
+				return
+			}
 
-		err = taskService.DeleteTask(ctx, int32(taskID), user.ID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error deleting task: %v\n", err)
-			return
+			fmt.Printf("Task %d deleted successfully\n", input)
 		}
-
-		fmt.Printf("Task %s deleted successfully\n", input)
 	},
 }
 

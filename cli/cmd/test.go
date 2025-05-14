@@ -28,7 +28,6 @@ This is primarily used for development and debugging purposes.`,
 		defer dbpool.Close()
 
 		authS := services.NewAuthService(queries)
-		taskS := services.NewTaskService(queries)
 
 		// Try to get the current user
 		user, err := authS.GetCurrentUser(context.Background())
@@ -44,26 +43,7 @@ This is primarily used for development and debugging purposes.`,
 			fmt.Printf("Name: %s\n", user.Name.String)
 		}
 
-		taskMap, err := getTaskMap()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		input, _ := taskMap[2]
-
-		task, err := taskS.GetTask(context.Background(), input, user.ID)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		ctx := context.Background()
-
-		tasks, err := taskS.ListTasks(ctx, user.ID, nil, nil, nil, nil, false)
-
-		tasks, _ = taskS.GetDependent(context.Background(), user.ID, task.ID)
-
-		fmt.Println(len(tasks))
+		// parseArgs(args)
 
 	},
 }

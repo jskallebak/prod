@@ -30,14 +30,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("tag called.")
-
-		inputID := args[0]
-		taskID, err := getID(getTaskMap, inputID)
-		if err != nil {
-			fmt.Println("AA")
-			fmt.Fprintf(os.Stderr, "%v", err)
-			return
-		}
+		inputs, err := ParseArgs(args)
 
 		dbpool, queries, ok := util.InitDBAndQueriesCLI()
 		if !ok {
@@ -54,30 +47,38 @@ to quickly create a Cobra application.`,
 			fmt.Fprintf(os.Stderr, "Error getting the user %v", err)
 		}
 
-		if cmd.Flags().Changed("add") {
-			err := taskService.AddTag(context.Background(), user.ID, taskID, taskTags)
+		for _, input := range inputs {
+			taskID, err := getID(getTaskMap, input)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintf(os.Stderr, "%v", err)
 				return
 			}
-		}
 
-		if cmd.Flags().Changed("clear") {
-			err := taskService.ClearTags(context.Background(), user.ID, taskID)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				return
+			if cmd.Flags().Changed("add") {
+				err := taskService.AddTag(context.Background(), user.ID, taskID, taskTags)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					return
+				}
 			}
-		}
 
-		if cmd.Flags().Changed("remove") {
-			err := taskService.RemoveTags(context.Background(), user.ID, taskID, taskTags)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				return
+			if cmd.Flags().Changed("clear") {
+				err := taskService.ClearTags(context.Background(), user.ID, taskID)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					return
+				}
 			}
+
+			if cmd.Flags().Changed("remove") {
+				err := taskService.RemoveTags(context.Background(), user.ID, taskID, taskTags)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					return
+				}
+			}
+			return
 		}
-		return
 
 	},
 }

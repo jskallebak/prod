@@ -113,17 +113,13 @@ func getTaskMap() (map[int]int32, error) {
 	return taskMap, nil
 }
 
-func getID(mapFunc func() (map[int]int32, error), input string) (int32, error) {
-	i, err := strconv.Atoi(input)
-	if err != nil {
-		return 0, fmt.Errorf("Error converting input to stirng: %w", err)
-	}
+func getID(mapFunc func() (map[int]int32, error), input int) (int32, error) {
 	m, err := mapFunc()
 	if err != nil {
 		return 0, err
 	}
 
-	taskID, exits := m[i]
+	taskID, exits := m[input]
 	if !exits {
 		return 0, fmt.Errorf("No tasks with %s iD", input)
 	}
@@ -340,7 +336,7 @@ func findTask(taskList []sqlc.Task, taskID int32) (sqlc.Task, error) {
 	return sqlc.Task{}, errors.New("could not find the task in list")
 }
 
-func ConfirmCmd(ctx context.Context, input string, taskID, userID int32, name string, ts *services.TaskService) error {
+func ConfirmCmd(ctx context.Context, input int, taskID, userID int32, name string, ts *services.TaskService) error {
 	// Get task info for confirmation
 	task, err := ts.GetTask(ctx, int32(taskID), userID)
 	if err != nil {
@@ -348,7 +344,7 @@ func ConfirmCmd(ctx context.Context, input string, taskID, userID int32, name st
 	}
 
 	// Confirm deletion unless --yes flag is used
-	fmt.Printf("You are about to %s task %s: \"%s\"\n", name, input, task.Description)
+	fmt.Printf("You are about to %s task %d: \"%s\"\n", name, input, task.Description)
 	fmt.Print("Are you sure? (y/N): ")
 	var confirmation string
 	fmt.Scanln(&confirmation)
@@ -358,3 +354,92 @@ func ConfirmCmd(ctx context.Context, input string, taskID, userID int32, name st
 	return nil
 
 }
+
+// ParseArgs parses arguments in formats like "1", "1-3", "1,2,4", "1 2 4" or combinations
+// Returns a slice of integers containing all the specified values
+func ParseArgs(args []string) ([]int, error) {
+	argStr := strings.Join(args, " ")
+	if argStr == "" {
+		return nil, fmt.Errorf("empty argument string")
+	}
+
+	var result []int
+
+	// First split by commas
+	commaSeparated := strings.Split(argStr, ",")
+
+	for _, commaPart := range commaSeparated {
+		// Then split each comma-separated part by spaces
+		spaceParts := strings.Fields(commaPart)
+
+		for _, part := range spaceParts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+
+			// Check if it's a range (e.g., "1-3")
+			if strings.Contains(part, "-") {
+				rangeParts := strings.Split(part, "-")
+				if len(rangeParts) != 2 {
+					return nil, fmt.Errorf("invalid range format: %s", part)
+				}
+
+				start, err := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
+				if err != nil {
+					return nil, fmt.Errorf("invalid range start: %s", rangeParts[0])
+				}
+
+				end, err := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
+				if err != nil {
+					return nil, fmt.Errorf("invalid range end: %s", rangeParts[1])
+				}
+
+				if end < start {
+					return nil, fmt.Errorf("range end cannot be less than start: %s", part)
+				}
+
+				for i := start; i <= end; i++ {
+					result = append(result, i)
+				}
+			} else {
+				// Single number
+				num, err := strconv.Atoi(part)
+				if err != nil {
+					return nil, fmt.Errorf("invalid number: %s", part)
+				}
+				result = append(result, num)
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func Input2Int(input string) (int, error) {
+	i, err := strconv.Atoi(input)
+	if err != nil {
+		return 0, err
+	}
+	return i, nil
+}
+
+// func parseArgs(args []string) []string {
+// 	var parsedArgs []string
+// 	pattern := regexp.MustCompile(`\d+-\d+`)
+//
+// 	for _, arg := range args {
+// 		matches := pattern.FindAllString(arg, -1)
+// 		for _, match := range matches {
+// 			splitMatch := strings.Split(match, "-")
+//
+// 			for _, part := range sort.Slice(splitMatch, func(i, j int) bool {
+// 				return i > j
+// 			}) {
+// 				fmt.Println(part)
+// 			}
+//
+// 		}
+// 	}
+//
+// 	return parsedArgs

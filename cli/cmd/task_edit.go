@@ -44,15 +44,10 @@ Available flags:
   --tags        Set tags (comma separated)
   --notes       Set additional notes
   --status      Set status (pending/completed)`,
-	Args: cobra.ExactArgs(1),
+	// Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse task ID from arguments
-		input := args[0]
-		taskID, err := getID(getTaskMap, input)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
-			return
-		}
+		inputs, err := ParseArgs(args)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -72,103 +67,112 @@ Available flags:
 			fmt.Fprintf(os.Stderr, "Failed to get user: %s", err)
 		}
 
-		// Get existing task to edit
-		existingTask, err := taskService.GetTask(context.Background(), taskID, user.ID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
-			return
-		}
-
-		// Prepare update params with existing values
-		updateParams := sqlc.UpdateTaskParams{
-			ID:          existingTask.ID,
-			UserID:      pgtype.Int4{Int32: user.ID, Valid: true},
-			Description: existingTask.Description,
-			Status:      existingTask.Status,
-			Priority:    existingTask.Priority,
-			DueDate:     existingTask.DueDate,
-			StartDate:   existingTask.StartDate,
-			ProjectID:   existingTask.ProjectID,
-			Recurrence:  existingTask.Recurrence,
-			Tags:        existingTask.Tags,
-			Notes:       existingTask.Notes,
-		}
-
-		// Only update fields that were specifically provided
-		if cmd.Flags().Changed("desc") {
-			updateParams.Description = editDesc
-		}
-
-		if cmd.Flags().Changed("priority") {
-			// Convert priority to uppercase for case-insensitive matching
-			upperPriority := strings.ToUpper(editPriority)
-			updateParams.Priority = pgtype.Text{
-				String: upperPriority,
-				Valid:  true,
-			}
-		}
-
-		if cmd.Flags().Changed("due") {
-			parsedDate, err := time.Parse("2006-01-02", editDueDate)
+		for _, input := range inputs {
+			taskID, err := getID(getTaskMap, input)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Invalid date format. Please use YYYY-MM-DD\n")
+				fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
 				return
 			}
-			updateParams.DueDate = pgtype.Timestamptz{
-				Time:  parsedDate,
-				Valid: true,
+
+			// Get existing task to edit
+			existingTask, err := taskService.GetTask(context.Background(), taskID, user.ID)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
+				return
 			}
-		}
 
-		if cmd.Flags().Changed("project") && editProjectID > 0 {
-			updateParams.ProjectID = pgtype.Int4{
-				Int32: int32(editProjectID),
-				Valid: true,
+			// Prepare update params with existing values
+			updateParams := sqlc.UpdateTaskParams{
+				ID:          existingTask.ID,
+				UserID:      pgtype.Int4{Int32: user.ID, Valid: true},
+				Description: existingTask.Description,
+				Status:      existingTask.Status,
+				Priority:    existingTask.Priority,
+				DueDate:     existingTask.DueDate,
+				StartDate:   existingTask.StartDate,
+				ProjectID:   existingTask.ProjectID,
+				Recurrence:  existingTask.Recurrence,
+				Tags:        existingTask.Tags,
+				Notes:       existingTask.Notes,
 			}
-		}
 
-		if cmd.Flags().Changed("tags") {
-			updateParams.Tags = editTags
-		}
-
-		if cmd.Flags().Changed("notes") {
-			updateParams.Notes = pgtype.Text{
-				String: editNotes,
-				Valid:  true,
+			// Only update fields that were specifically provided
+			if cmd.Flags().Changed("desc") {
+				updateParams.Description = editDesc
 			}
-		}
 
-		if cmd.Flags().Changed("status") {
-			updateParams.Status = editStatus
+			if cmd.Flags().Changed("priority") {
+				// Convert priority to uppercase for case-insensitive matching
+				upperPriority := strings.ToUpper(editPriority)
+				updateParams.Priority = pgtype.Text{
+					String: upperPriority,
+					Valid:  true,
+				}
+			}
 
-		}
+			if cmd.Flags().Changed("due") {
+				parsedDate, err := time.Parse("2006-01-02", editDueDate)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Invalid date format. Please use YYYY-MM-DD\n")
+					return
+				}
+				updateParams.DueDate = pgtype.Timestamptz{
+					Time:  parsedDate,
+					Valid: true,
+				}
+			}
 
-		err = ConfirmCmd(context.Background(), input, taskID, user.ID, EDIT, taskService)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			return
-		}
+			if cmd.Flags().Changed("project") && editProjectID > 0 {
+				updateParams.ProjectID = pgtype.Int4{
+					Int32: int32(editProjectID),
+					Valid: true,
+				}
+			}
 
-		// Call the service to update the task
-		updatedTask, err := queries.UpdateTask(context.Background(), updateParams)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating task: %v\n", err)
-			return
-		}
+			if cmd.Flags().Changed("tags") {
+				updateParams.Tags = editTags
+			}
 
-		fmt.Printf("Task %s updated successfully\n", input)
-		fmt.Printf("Description: %s\n", updatedTask.Description)
-		if updatedTask.Priority.Valid {
-			fmt.Printf("Priority: %s\n", updatedTask.Priority.String)
-		}
-		if updatedTask.DueDate.Valid {
-			fmt.Printf("Due date: %s\n", updatedTask.DueDate.Time.Format("2006-01-02"))
-		}
-		if len(updatedTask.Tags) > 0 {
-			fmt.Printf("Tags: %v\n", updatedTask.Tags)
-		}
-		if updatedTask.Notes.Valid {
-			fmt.Printf("Notes: %s\n", updatedTask.Notes.String)
+			if cmd.Flags().Changed("notes") {
+				updateParams.Notes = pgtype.Text{
+					String: editNotes,
+					Valid:  true,
+				}
+			}
+
+			if cmd.Flags().Changed("status") {
+				updateParams.Status = editStatus
+
+			}
+
+			err = ConfirmCmd(context.Background(), input, taskID, user.ID, EDIT, taskService)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				return
+			}
+
+			// Call the service to update the task
+			updatedTask, err := queries.UpdateTask(context.Background(), updateParams)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error updating task: %v\n", err)
+				return
+			}
+
+			fmt.Printf("Task %d updated successfully\n", input)
+			fmt.Printf("Description: %s\n", updatedTask.Description)
+			if updatedTask.Priority.Valid {
+				fmt.Printf("Priority: %s\n", updatedTask.Priority.String)
+			}
+			if updatedTask.DueDate.Valid {
+				fmt.Printf("Due date: %s\n", updatedTask.DueDate.Time.Format("2006-01-02"))
+			}
+			if len(updatedTask.Tags) > 0 {
+				fmt.Printf("Tags: %v\n", updatedTask.Tags)
+			}
+			if updatedTask.Notes.Valid {
+				fmt.Printf("Notes: %s\n", updatedTask.Notes.String)
+			}
+
 		}
 	},
 }

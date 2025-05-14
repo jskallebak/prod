@@ -23,7 +23,7 @@ For example:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse task ID from arguments
-		input := args[0]
+		input, err := Input2Int(args[0])
 		taskID, err := getID(getTaskMap, input)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")

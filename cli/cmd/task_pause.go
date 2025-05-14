@@ -24,16 +24,15 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		input := args[0]
-		taskID, err := getID(getTaskMap, input)
+		inputs, err := ParseArgs(args)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error invalid task ID\n")
+			fmt.Fprintf(os.Stderr, "pause: error in ParseArgs: %v", err)
 			return
 		}
 
 		dbpool, queries, ok := util.InitDBAndQueriesCLI()
 		if !ok {
-			fmt.Fprintf(os.Stderr, "Error connection to database: %v", err)
+			fmt.Fprintf(os.Stderr, "Error connection to database")
 			os.Exit(1)
 		}
 		defer dbpool.Close()
@@ -47,21 +46,30 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		err = ConfirmCmd(context.Background(), input, taskID, user.ID, PAUSE, taskService)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			return
-		}
+		for _, input := range inputs {
+			taskID, err := getID(getTaskMap, input)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error invalid task ID\n")
+				return
+			}
 
-		task, err := taskService.PauseTask(context.Background(), int32(taskID), user.ID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
-			return
-		}
+			err = ConfirmCmd(context.Background(), input, taskID, user.ID, PAUSE, taskService)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				return
+			}
 
-		fmt.Printf("Task %s marked as pending\n", input)
-		fmt.Printf("Description: %s\n", task.Description)
-		fmt.Printf("updated at: %s\n", task.UpdatedAt.Time.Format("2006-01-02 15:04:05"))
+			task, err := taskService.PauseTask(context.Background(), int32(taskID), user.ID)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
+				return
+			}
+
+			fmt.Printf("Task %d marked as pending\n", input)
+			fmt.Printf("Description: %s\n", task.Description)
+			fmt.Printf("updated at: %s\n", task.UpdatedAt.Time.Format("2006-01-02 15:04:05"))
+
+		}
 
 	},
 }

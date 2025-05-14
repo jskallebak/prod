@@ -63,7 +63,7 @@ For example:
 		}
 
 		if interactive {
-			IMode(user, taskService)
+			addIMode(user, taskService)
 			return
 		}
 
@@ -158,7 +158,7 @@ For example:
 			return
 		}
 
-		fmt.Printf("Created task: %s (ID: %d) (dbID: %s)\n", description, index, task.ID)
+		fmt.Printf("Created task: %s (ID: %d) (dbID: %d)\n", description, index, task.ID)
 		fmt.Printf("Created at: %s\n", task.CreatedAt.Time.Format("2006-01-02 15:04"))
 	},
 }
@@ -176,7 +176,7 @@ func init() {
 	addCmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive add")
 }
 
-func IMode(user *sqlc.User, ts *services.TaskService) {
+func addIMode(user *sqlc.User, ts *services.TaskService) {
 	params := services.TaskParams{}
 	var description string
 

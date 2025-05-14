@@ -24,14 +24,10 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		input := args[0]
-		taskID, err := getID(getTaskMap, input)
+		ctx := context.Background()
+		inputs, err := ParseArgs(args)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error invalid task ID\n")
-			return
 		}
 
 		dbpool, queries, ok := util.InitDBAndQueriesCLI()
@@ -46,25 +42,37 @@ to quickly create a Cobra application.`,
 
 		user, err := authService.GetCurrentUser(context.Background())
 		if err != nil {
-			fmt.Println("Needs to be logged in to show tasks")
+			fmt.Println("Needs to be logged to start a task")
 			return
 		}
 
-		err = ConfirmCmd(context.Background(), input, taskID, user.ID, START, taskService)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			return
-		}
+		for _, input := range inputs {
+			taskID, err := getID(getTaskMap, input)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error invalid task ID\n")
+				return
+			}
 
-		task, err := taskService.StartTask(context.Background(), taskID, user.ID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "No tasks with ID %v\n", taskID)
-			return
-		}
+			err = ConfirmCmd(ctx, input, taskID, user.ID, START, taskService)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				return
+			}
 
-		fmt.Printf("Task %s marked as active\n", input)
-		fmt.Printf("Description: %s\n", task.Description)
-		fmt.Printf("updated at: %s\n", task.UpdatedAt.Time.Format("2006-01-02 15:04:05"))
+			task, err := taskService.StartTask(ctx, taskID, user.ID)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "No tasks with ID %v\n", taskID)
+				return
+			}
+
+			fmt.Printf("Task %d marked as active\n", input)
+			fmt.Printf("Description: %s\n", task.Description)
+			fmt.Printf("updated at: %s\n", task.UpdatedAt.Time.Format("2006-01-02 15:04:05"))
+
+		}
 
 	},
 }

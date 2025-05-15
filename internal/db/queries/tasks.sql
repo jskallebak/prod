@@ -241,3 +241,10 @@ RETURNING *;
 SELECT * FROM tasks
 WHERE user_id = $1 AND start_date >= CURRENT_DATE;
 
+-- name: SetTaskStartToday :one
+UPDATE tasks
+SET
+    start_date = CURRENT_DATE,
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING *;

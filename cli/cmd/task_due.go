@@ -13,9 +13,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// pauseCmd represents the pause command
-var taskPauseCmd = &cobra.Command{
-	Use:   "pause",
+var confirm bool
+
+// dueCmd represents the due command
+var taskDueCmd = &cobra.Command{
+	Use:   "today",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -24,12 +26,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		inputs, err := ParseArgs(args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "pause: error in ParseArgs: %v", err)
-			return
-		}
-
+		fmt.Println("due called")
+		ctx := context.Background()
 		dbpool, queries, ok := util.InitDBAndQueriesCLI()
 		if !ok {
 			fmt.Fprintf(os.Stderr, "Error connection to database")
@@ -42,30 +40,37 @@ to quickly create a Cobra application.`,
 
 		user, err := authService.GetCurrentUser(context.Background())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Needs to be logged in to show tasks\n")
+			fmt.Fprintf(os.Stderr, "Needs to be logged in to show tasks")
 			return
+		}
+
+		inputs, err := ParseArgs(args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "due: error in ParseArgs: %v\n", err)
 		}
 
 		for _, input := range inputs {
 			taskID, err := getID(getTaskMap, input)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error invalid task ID\n")
+				fmt.Fprintf(os.Stderr, "due_today: error invalid task ID\n")
 				return
 			}
 
-			err = ConfirmCmd(context.Background(), input, taskID, user.ID, PAUSE, taskService)
+			if !confirm {
+				err = ConfirmCmd(ctx, input, taskID, user.ID, DUE, taskService)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "due_today: %v\n", err)
+					return
+				}
+			}
+
+			task, err := taskService.DueToday(ctx, user.ID, taskID)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
+				fmt.Fprintf(os.Stderr, "Due: %v", err)
 				return
 			}
 
-			task, err := taskService.PauseTask(context.Background(), int32(taskID), user.ID)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
-				return
-			}
-
-			fmt.Printf("Task %d marked as pending\n", input)
+			fmt.Printf("Task %d due_date set to today\n", input)
 			fmt.Printf("Description: %s\n", task.Description)
 			fmt.Printf("updated at: %s\n", task.UpdatedAt.Time.Format("2006-01-02 15:04:05"))
 
@@ -75,15 +80,18 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	taskCmd.AddCommand(taskPauseCmd)
+	taskCmd.AddCommand(taskDueCmd)
+
+	// Define flags for the delete command
+	taskDueCmd.Flags().BoolVar(&confirm, "yes", false, "Delete without confirmation")
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// pauseCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// dueCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// pauseCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// dueCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

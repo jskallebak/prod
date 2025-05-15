@@ -50,6 +50,7 @@ type Querier interface {
 	ResumePomodoroSession(ctx context.Context, arg ResumePomodoroSessionParams) (PomodoroSession, error)
 	SetActiveProject(ctx context.Context, arg SetActiveProjectParams) error
 	SetTags(ctx context.Context, arg SetTagsParams) error
+	SetTaskStartToday(ctx context.Context, arg SetTaskStartTodayParams) (Task, error)
 	SetToday(ctx context.Context, arg SetTodayParams) (Task, error)
 	StartTask(ctx context.Context, arg StartTaskParams) (Task, error)
 	StopPomodoroSession(ctx context.Context, arg StopPomodoroSessionParams) (PomodoroSession, error)

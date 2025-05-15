@@ -739,6 +739,43 @@ func (q *Queries) SetTags(ctx context.Context, arg SetTagsParams) error {
 	return err
 }
 
+const setTaskStartToday = `-- name: SetTaskStartToday :one
+UPDATE tasks
+SET
+    start_date = CURRENT_DATE,
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
+`
+
+type SetTaskStartTodayParams struct {
+	ID     int32       `json:"id"`
+	UserID pgtype.Int4 `json:"user_id"`
+}
+
+func (q *Queries) SetTaskStartToday(ctx context.Context, arg SetTaskStartTodayParams) (Task, error) {
+	row := q.db.QueryRow(ctx, setTaskStartToday, arg.ID, arg.UserID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Description,
+		&i.Status,
+		&i.Priority,
+		&i.DueDate,
+		&i.StartDate,
+		&i.CompletedAt,
+		&i.ProjectID,
+		&i.Recurrence,
+		&i.Tags,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Dependent,
+	)
+	return i, err
+}
+
 const setToday = `-- name: SetToday :one
 UPDATE tasks
 SET

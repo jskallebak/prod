@@ -243,6 +243,23 @@ func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int32
 	return nil
 }
 
+func (s TaskService) DueToday(ctx context.Context, userID int32, taskID int32) (*sqlc.Task, error) {
+	task, err := s.queries.SetTaskStartToday(ctx, sqlc.SetTaskStartTodayParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("DueToday: failed to set due_date: %v", err)
+	}
+
+	return &task, nil
+
+}
+
 func (s *TaskService) AddTag(ctx context.Context, userID, taskID int32, tags []string) error {
 	oldTags, err := s.GetTags(ctx, userID, taskID)
 	if err != nil {

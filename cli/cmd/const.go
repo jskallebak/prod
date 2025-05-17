@@ -7,5 +7,5 @@ const (
 	DELETE   = "delete"
 	PAUSE    = "pause"
 	EDIT     = "edit"
-	DUE      = "set start date to today for"
+	DUE      = "set due date to today for"
 )

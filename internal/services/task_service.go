@@ -243,14 +243,22 @@ func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int32
 	return nil
 }
 
-func (s TaskService) DueToday(ctx context.Context, userID int32, taskID int32) (*sqlc.Task, error) {
-	task, err := s.queries.SetTaskStartToday(ctx, sqlc.SetTaskStartTodayParams{
-		ID: taskID,
-		UserID: pgtype.Int4{
-			Int32: userID,
+func (s TaskService) SetDue(ctx context.Context, userID int32, taskID int32, date *time.Time) (*sqlc.Task, error) {
+	var params sqlc.SetTaskDueParams
+	params.ID = taskID
+	params.UserID = pgtype.Int4{
+		Int32: userID,
+		Valid: true,
+	}
+
+	if date != nil {
+		params.Date = pgtype.Date{
+			Time:  *date,
 			Valid: true,
-		},
-	})
+		}
+	}
+
+	task, err := s.queries.SetTaskDue(ctx, params)
 
 	if err != nil {
 		return nil, fmt.Errorf("DueToday: failed to set due_date: %v", err)

@@ -7,17 +7,21 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
 )
 
-var confirm bool
+var (
+	confirm bool
+	date    string
+)
 
 // dueCmd represents the due command
-var taskDueCmd = &cobra.Command{
-	Use:   "today",
+var dueCmd = &cobra.Command{
+	Use:   "due",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -64,7 +68,17 @@ to quickly create a Cobra application.`,
 				}
 			}
 
-			task, err := taskService.DueToday(ctx, user.ID, taskID)
+			var parsedDate *time.Time
+			if date != "" {
+				parsed, err := time.Parse("2006-01-02", date)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Due: Invalid date format %v\n", err)
+					return
+				}
+				parsedDate = &parsed
+			}
+
+			task, err := taskService.SetDue(ctx, user.ID, taskID, parsedDate)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Due: %v", err)
 				return
@@ -80,10 +94,11 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	taskCmd.AddCommand(taskDueCmd)
+	taskCmd.AddCommand(dueCmd)
 
 	// Define flags for the delete command
-	taskDueCmd.Flags().BoolVar(&confirm, "yes", false, "Delete without confirmation")
+	dueCmd.Flags().BoolVar(&confirm, "yes", false, "Delete without confirmation")
+	dueCmd.Flags().StringVarP(&date, "date", "d", "", "Specify a date (YYYY-MM-DD)")
 
 	// Here you will define your flags and configuration settings.
 

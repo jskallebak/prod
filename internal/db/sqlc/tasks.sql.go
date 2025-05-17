@@ -596,7 +596,7 @@ AND (
 )
 AND (
     NOT $6::boolean IS TRUE
-    OR DATE(start_date) <= CURRENT_DATE
+    OR DATE(due_date) <= CURRENT_DATE
 )
 ORDER BY
     CASE 
@@ -739,22 +739,26 @@ func (q *Queries) SetTags(ctx context.Context, arg SetTagsParams) error {
 	return err
 }
 
-const setTaskStartToday = `-- name: SetTaskStartToday :one
+const setTaskDue = `-- name: SetTaskDue :one
 UPDATE tasks
 SET
-    start_date = CURRENT_DATE,
+    due_date = COALESCE(
+        $3::date, 
+        CURRENT_DATE
+    ),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
-type SetTaskStartTodayParams struct {
+type SetTaskDueParams struct {
 	ID     int32       `json:"id"`
 	UserID pgtype.Int4 `json:"user_id"`
+	Date   pgtype.Date `json:"date"`
 }
 
-func (q *Queries) SetTaskStartToday(ctx context.Context, arg SetTaskStartTodayParams) (Task, error) {
-	row := q.db.QueryRow(ctx, setTaskStartToday, arg.ID, arg.UserID)
+func (q *Queries) SetTaskDue(ctx context.Context, arg SetTaskDueParams) (Task, error) {
+	row := q.db.QueryRow(ctx, setTaskDue, arg.ID, arg.UserID, arg.Date)
 	var i Task
 	err := row.Scan(
 		&i.ID,

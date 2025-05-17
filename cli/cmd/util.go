@@ -245,6 +245,11 @@ func ProcessList(list []sqlc.Task, q *sqlc.Queries, u *sqlc.User) {
 		// }
 		if item.DueDate.Valid {
 			fmt.Printf("    %s📅 Due: %s\n", indent, item.DueDate.Time.Format("Mon, Jan 2, 2006"))
+			if item.DueDate.Time.Format("Mon, Jan 2, 2006") > time.Now().Format("Mon, Jan 2, 2006") {
+				text := coloredText(ColorRed, "Task overdue")
+				fmt.Printf("    ❗ %s\n", text)
+
+			}
 		}
 		// else {
 		// 	fmt.Printf("\t📅 Due: --\n")

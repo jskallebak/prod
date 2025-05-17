@@ -59,7 +59,7 @@ AND (
 )
 AND (
     NOT sqlc.narg(today_filter)::boolean IS TRUE
-    OR DATE(start_date) <= CURRENT_DATE
+    OR DATE(due_date) <= CURRENT_DATE
 )
 ORDER BY
     CASE 
@@ -241,10 +241,13 @@ RETURNING *;
 SELECT * FROM tasks
 WHERE user_id = $1 AND start_date >= CURRENT_DATE;
 
--- name: SetTaskStartToday :one
+-- name: SetTaskDue :one
 UPDATE tasks
 SET
-    start_date = CURRENT_DATE,
+    due_date = COALESCE(
+        sqlc.narg(date)::date, 
+        CURRENT_DATE
+    ),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING *;
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent;

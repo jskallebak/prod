@@ -36,6 +36,7 @@ For example:
 	Run: func(cmd *cobra.Command, args []string) {
 		// Combine all arguments into a single task description
 		description := strings.Join(args, " ")
+		description = strings.ReplaceAll(description, "\n", "")
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -83,27 +84,32 @@ For example:
 		// Parse due date if provided
 		if cmd.Flags().Changed("due") {
 			// Try parsing with full date format (YYYY-MM-DD)
-			parsedDate, err := time.Parse("2006-01-02", taskDueDate)
+			if taskDueDate == "today" {
+				today := time.Now()
+				params.DueDate = &today
+			} else {
+				parsedDate, err := time.Parse("2006-01-02", taskDueDate)
 
-			// If that fails, try parsing just month and day (MM-DD)
-			if err != nil {
-				// Try MM-DD format and add current year
-				shortDate, shortErr := time.Parse("01-02", taskDueDate)
-				if shortErr != nil {
-					// Also try MM/DD format
-					shortDate, shortErr = time.Parse("01/02", taskDueDate)
+				// If that fails, try parsing just month and day (MM-DD)
+				if err != nil {
+					// Try MM-DD format and add current year
+					shortDate, shortErr := time.Parse("01-02", taskDueDate)
 					if shortErr != nil {
-						fmt.Fprintf(os.Stderr, "Invalid date format. Please use YYYY-MM-DD, MM-DD, or MM/DD\n")
-						return
+						// Also try MM/DD format
+						shortDate, shortErr = time.Parse("01/02", taskDueDate)
+						if shortErr != nil {
+							fmt.Fprintf(os.Stderr, "Invalid date format. Please use YYYY-MM-DD, MM-DD, or MM/DD\n")
+							return
+						}
 					}
+
+					// Take the parsed month and day but use current year
+					currentYear := time.Now().Year()
+					parsedDate = time.Date(currentYear, shortDate.Month(), shortDate.Day(), 0, 0, 0, 0, time.UTC)
 				}
 
-				// Take the parsed month and day but use current year
-				currentYear := time.Now().Year()
-				parsedDate = time.Date(currentYear, shortDate.Month(), shortDate.Day(), 0, 0, 0, 0, time.UTC)
+				params.DueDate = &parsedDate
 			}
-
-			params.DueDate = &parsedDate
 		}
 
 		// Add priority if provided

@@ -56,7 +56,7 @@ to quickly create a Cobra application.`,
 				return
 			}
 
-			err = ConfirmCmd(ctx, input, taskID, user.ID, START, taskService)
+			err = ConfirmCmd(ctx, taskID, user.ID, START, taskService)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 				return

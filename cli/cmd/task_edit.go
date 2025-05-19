@@ -69,13 +69,14 @@ Available flags:
 
 		for _, input := range inputs {
 			taskID, err := getID(getTaskMap, input)
+			ctx := context.Background()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")
 				return
 			}
 
 			// Get existing task to edit
-			existingTask, err := taskService.GetTask(context.Background(), taskID, user.ID)
+			existingTask, err := taskService.GetTask(ctx, taskID, user.ID)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: Failed to find task with ID %d: %v\n", taskID, err)
 				return
@@ -145,14 +146,14 @@ Available flags:
 
 			}
 
-			err = ConfirmCmd(context.Background(), input, taskID, user.ID, EDIT, taskService)
+			err = ConfirmCmd(ctx, taskID, user.ID, EDIT, taskService)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 				return
 			}
 
 			// Call the service to update the task
-			updatedTask, err := queries.UpdateTask(context.Background(), updateParams)
+			updatedTask, err := queries.UpdateTask(ctx, updateParams)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error updating task: %v\n", err)
 				return

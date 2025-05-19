@@ -338,7 +338,7 @@ func findTask(taskList []sqlc.Task, taskID int32) (sqlc.Task, error) {
 	return sqlc.Task{}, errors.New("could not find the task in list")
 }
 
-func ConfirmCmd(ctx context.Context, input int, taskID, userID int32, action ActionType, ts *services.TaskService) error {
+func ConfirmCmd(ctx context.Context, taskID, userID int32, action ActionType, ts *services.TaskService) error {
 	// Get task info for confirmation
 	task, err := ts.GetTask(ctx, taskID, userID)
 	if err != nil {
@@ -351,10 +351,10 @@ func ConfirmCmd(ctx context.Context, input int, taskID, userID int32, action Act
 	}
 
 	reverseMap := ReverseMap(taskMap)
-	input = reverseMap[taskID]
+	taskID = int32(reverseMap[taskID])
 
 	// Confirm deletion unless --yes flag is used
-	fmt.Printf("You are about to %s task %d: \"%s\"\n", action, input, task.Description)
+	fmt.Printf("You are about to %s task %d: \"%s\"\n", action, taskID, task.Description)
 	fmt.Print("Are you sure? (y/N): ")
 	var confirmation string
 	fmt.Scanln(&confirmation)
@@ -451,7 +451,7 @@ func RecursiveSubtasks(
 	if len(subtasks) != 0 {
 		fmt.Printf("The task have subtask(s), confirm to %s\n", action)
 		for _, st := range subtasks {
-			err = ConfirmCmd(ctx, int(taskID), st.ID, userID, action, ts)
+			err = ConfirmCmd(ctx, st.ID, userID, action, ts)
 			if err != nil {
 				return fmt.Errorf("RecursiveSubtasks: Error with ConfirmCmd: %v", err)
 			}

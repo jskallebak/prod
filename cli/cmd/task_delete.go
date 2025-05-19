@@ -61,7 +61,7 @@ For example:
 			}
 
 			if !confirmDelete {
-				err = ConfirmCmd(ctx, input, taskID, user.ID, DELETE, taskService)
+				err = ConfirmCmd(ctx, taskID, user.ID, DELETE, taskService)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
 					return

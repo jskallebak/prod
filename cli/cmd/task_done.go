@@ -56,7 +56,7 @@ For example:
 				return
 			}
 
-			err = ConfirmCmd(ctx, input, taskID, user.ID, COMPLETE, taskService)
+			err = ConfirmCmd(ctx, taskID, user.ID, COMPLETE, taskService)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "doneCmd: ConfirmCmd: %v\n", err)
 				return

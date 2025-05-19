@@ -25,6 +25,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		inputs, err := ParseArgs(args)
+		ctx := context.Background()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "pause: error in ParseArgs: %v", err)
 			return
@@ -53,7 +54,7 @@ to quickly create a Cobra application.`,
 				return
 			}
 
-			err = ConfirmCmd(context.Background(), input, taskID, user.ID, PAUSE, taskService)
+			err = ConfirmCmd(ctx, taskID, user.ID, PAUSE, taskService)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 				return

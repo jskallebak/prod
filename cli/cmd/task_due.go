@@ -61,7 +61,7 @@ to quickly create a Cobra application.`,
 			}
 
 			if !confirm {
-				err = ConfirmCmd(ctx, input, taskID, user.ID, DUE, taskService)
+				err = ConfirmCmd(ctx, taskID, user.ID, DUE, taskService)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "due_today: %v\n", err)
 					return

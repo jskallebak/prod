@@ -36,6 +36,50 @@ type TaskParams struct {
 	Dependent   int32
 }
 
+// CompleteRecurringTask completes a task and generates the next instance if it's recurring
+func (s *TaskService) CompleteRecurringTask(ctx context.Context, taskID, userID int32) (*sqlc.Task, *sqlc.Task, error) {
+	// Complete the current task
+	completedTask, err := s.CompleteTask(ctx, taskID, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Check if it's a recurring task
+	if completedTask.Recurrence.Valid && completedTask.Recurrence.String != "" {
+		// Generate the next instance
+		nextTask, err := GenerateNextTaskInstance(*completedTask, nil)
+		if err != nil {
+			// Log error but don't fail the completion
+			return completedTask, nil, fmt.Errorf("failed to generate next recurring task: %w", err)
+		}
+
+		// Create the next task instance in the database
+		createParams := sqlc.CreateTaskParams{
+			UserID:      nextTask.UserID,
+			Description: nextTask.Description,
+			Status:      nextTask.Status,
+			Priority:    nextTask.Priority,
+			DueDate:     nextTask.DueDate,
+			StartDate:   nextTask.StartDate,
+			ProjectID:   nextTask.ProjectID,
+			Recurrence:  nextTask.Recurrence,
+			Tags:        nextTask.Tags,
+			Notes:       nextTask.Notes,
+			Dependent:   nextTask.Dependent,
+		}
+
+		createdTask, err := s.queries.CreateTask(ctx, createParams)
+		if err != nil {
+			return completedTask, nil, fmt.Errorf("failed to create next task instance: %w", err)
+		}
+
+		return completedTask, &createdTask, nil
+	}
+
+	// Not a recurring task, just return the completed task
+	return completedTask, nil, nil
+}
+
 // CreateTask creates a new task with minimal required parameters
 func (s *TaskService) CreateTask(ctx context.Context, userID int32, params TaskParams) (*sqlc.Task, error) {
 	// Input validation - only description is required
@@ -228,8 +272,8 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 }
 
 // DeleteTask removes a task
-func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int32) error {
-	err := s.queries.DeleteTask(ctx, sqlc.DeleteTaskParams{
+func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int32) (*sqlc.Task, error) {
+	task, err := s.queries.DeleteTask(ctx, sqlc.DeleteTaskParams{
 		ID: taskID,
 		UserID: pgtype.Int4{
 			Int32: userID,
@@ -237,10 +281,10 @@ func (s *TaskService) DeleteTask(ctx context.Context, taskID int32, userID int32
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to delete task: %w", err)
+		return nil, fmt.Errorf("failed to delete task: %w", err)
 	}
 
-	return nil
+	return &task, nil
 }
 
 func (s TaskService) SetDue(ctx context.Context, userID int32, taskID int32, date *time.Time) (*sqlc.Task, error) {

@@ -1,11 +1,14 @@
 package cmd
 
+type ActionType string
+
+// Action constants
 const (
-	COMPLETE = "complete"
-	DONE     = "done"
-	START    = "start"
-	DELETE   = "delete"
-	PAUSE    = "pause"
-	EDIT     = "edit"
-	DUE      = "set due date to today for"
+	DELETE   ActionType = "delete"
+	COMPLETE ActionType = "complete"
+	START    ActionType = "start"
+	PAUSE    ActionType = "pause"
+	EDIT     ActionType = "edit"
+	DUE      ActionType = "set start date to today for"
+	// Add more actions as needed
 )

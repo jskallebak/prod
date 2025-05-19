@@ -22,7 +22,7 @@ type Querier interface {
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
-	DeleteTask(ctx context.Context, arg DeleteTaskParams) error
+	DeleteTask(ctx context.Context, arg DeleteTaskParams) (Task, error)
 	DetachTaskFromPomodoro(ctx context.Context, arg DetachTaskFromPomodoroParams) (PomodoroSession, error)
 	GetActivePomodoroSession(ctx context.Context, userID pgtype.Int4) (PomodoroSession, error)
 	GetActiveProject(ctx context.Context, id int32) (Project, error)

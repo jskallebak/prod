@@ -121,7 +121,7 @@ func getID(mapFunc func() (map[int]int32, error), input int) (int32, error) {
 
 	taskID, exits := m[input]
 	if !exits {
-		return 0, fmt.Errorf("No tasks with %s iD", input)
+		return 0, fmt.Errorf("No tasks with ID %d\n", input)
 	}
 	return taskID, nil
 }
@@ -276,17 +276,14 @@ func ProcessList(list []sqlc.Task, q *sqlc.Queries, u *sqlc.User) {
 func SortTaskList(taskList []sqlc.Task) []sqlc.Task {
 	subtaskMap := MakeSubtaskMap(taskList)
 	sortedList := []sqlc.Task{}
-
 	counter := 0
 
 	for _, task := range taskList {
 		if task.Dependent.Valid {
-			// fmt.Println(i)
 			continue
 		}
 
 		sortedList = append(sortedList, task)
-		// fmt.Println(i)
 
 		// Make a dict with subtasks, if the current task are in the dict, append them
 		subtasks, exits := subtaskMap[task.ID]
@@ -341,15 +338,23 @@ func findTask(taskList []sqlc.Task, taskID int32) (sqlc.Task, error) {
 	return sqlc.Task{}, errors.New("could not find the task in list")
 }
 
-func ConfirmCmd(ctx context.Context, input int, taskID, userID int32, name string, ts *services.TaskService) error {
+func ConfirmCmd(ctx context.Context, input int, taskID, userID int32, action ActionType, ts *services.TaskService) error {
 	// Get task info for confirmation
-	task, err := ts.GetTask(ctx, int32(taskID), userID)
+	task, err := ts.GetTask(ctx, taskID, userID)
 	if err != nil {
 		return fmt.Errorf("Error: Failed to find task with ID %d: %v", taskID, err)
 	}
 
+	taskMap, err := getTaskMap()
+	if err != nil {
+		return fmt.Errorf("ConfirmCmd: getTaskMap: %v", err)
+	}
+
+	reverseMap := ReverseMap(taskMap)
+	input = reverseMap[taskID]
+
 	// Confirm deletion unless --yes flag is used
-	fmt.Printf("You are about to %s task %d: \"%s\"\n", name, input, task.Description)
+	fmt.Printf("You are about to %s task %d: \"%s\"\n", action, input, task.Description)
 	fmt.Print("Are you sure? (y/N): ")
 	var confirmation string
 	fmt.Scanln(&confirmation)
@@ -427,6 +432,39 @@ func Input2Int(input string) (int, error) {
 		return 0, err
 	}
 	return i, nil
+}
+
+func RecursiveSubtasks(
+	ctx context.Context,
+	userID int32,
+	taskID int32,
+	ts *services.TaskService,
+	action ActionType,
+	input int,
+	executeFunc func(context.Context, int32, int32) (*sqlc.Task, error),
+) error {
+	subtasks, err := ts.GetDependent(ctx, userID, taskID)
+	if err != nil {
+		return fmt.Errorf("RecursiveSubtasks: Error with GetDependent: %v", err)
+	}
+
+	if len(subtasks) != 0 {
+		fmt.Printf("The task have subtask(s), confirm to %s\n", action)
+		for _, st := range subtasks {
+			err = ConfirmCmd(ctx, int(taskID), st.ID, userID, action, ts)
+			if err != nil {
+				return fmt.Errorf("RecursiveSubtasks: Error with ConfirmCmd: %v", err)
+			}
+
+			_, err = executeFunc(ctx, st.ID, userID)
+			if err != nil {
+				return fmt.Errorf("RecursiveSubtasks: Error with DeleteTask: %v", err)
+			}
+			fmt.Printf("Task %d deleted successfully\n", input)
+		}
+	}
+
+	return nil
 }
 
 // func parseArgs(args []string) []string {

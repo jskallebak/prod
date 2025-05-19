@@ -205,9 +205,10 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 	return i, err
 }
 
-const deleteTask = `-- name: DeleteTask :exec
+const deleteTask = `-- name: DeleteTask :one
 DELETE FROM tasks
 WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
 `
 
 type DeleteTaskParams struct {
@@ -215,9 +216,27 @@ type DeleteTaskParams struct {
 	UserID pgtype.Int4 `json:"user_id"`
 }
 
-func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) error {
-	_, err := q.db.Exec(ctx, deleteTask, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, deleteTask, arg.ID, arg.UserID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Description,
+		&i.Status,
+		&i.Priority,
+		&i.DueDate,
+		&i.StartDate,
+		&i.CompletedAt,
+		&i.ProjectID,
+		&i.Recurrence,
+		&i.Tags,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Dependent,
+	)
+	return i, err
 }
 
 const getDependentTasks = `-- name: GetDependentTasks :many

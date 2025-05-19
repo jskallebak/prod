@@ -39,26 +39,33 @@ For example:
 
 		user, err := authService.GetCurrentUser(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
+			fmt.Fprintf(os.Stderr, "doneCmd: getCurrentUser: %v\n", err)
 			return
 		}
 
 		for _, input := range inputs {
 			taskID, err := getID(getTaskMap, input)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintf(os.Stderr, "doneCmd: getID: %v\n", err)
+				return
+			}
+
+			err = RecursiveSubtasks(ctx, user.ID, taskID, taskService, "finish", input, taskService.CompleteTask)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "doneCmd: %v\n", err)
+				return
 			}
 
 			err = ConfirmCmd(ctx, input, taskID, user.ID, COMPLETE, taskService)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
+				fmt.Fprintf(os.Stderr, "doneCmd: ConfirmCmd: %v\n", err)
 				return
 			}
 
 			// Complete the task
 			completedTask, err := taskService.CompleteTask(ctx, taskID, user.ID)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error marking task as completed: %v\n", err)
+				fmt.Fprintf(os.Stderr, "doneCmd: taskService.CompleteTask: %v\n", err)
 				return
 			}
 

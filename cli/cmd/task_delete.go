@@ -54,28 +54,10 @@ For example:
 				return
 			}
 
-			subtasks, err := taskService.GetDependent(ctx, user.ID, taskID)
+			err = RecursiveSubtasks(ctx, user.ID, taskID, taskService, "delete", input, taskService.DeleteTask)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
+				fmt.Fprintf(os.Stderr, "DeleteCmd: %v", err)
 				return
-			}
-
-			if len(subtasks) != 0 {
-				fmt.Println("The task have subtask(s), confirm to delete them")
-				for _, st := range subtasks {
-					err = ConfirmCmd(ctx, int(st.ID), st.ID, user.ID, DELETE, taskService)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "%s\n", err)
-						return
-					}
-
-					err = taskService.DeleteTask(ctx, st.ID, user.ID)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "task_delete: Error deleting task: %v\n", err)
-						return
-					}
-					fmt.Printf("Task %d deleted successfully\n", input)
-				}
 			}
 
 			if !confirmDelete {
@@ -86,7 +68,7 @@ For example:
 				}
 			}
 
-			err = taskService.DeleteTask(ctx, int32(taskID), user.ID)
+			_, err = taskService.DeleteTask(ctx, int32(taskID), user.ID)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "task_delete: Error deleting task: %v\n", err)
 				return

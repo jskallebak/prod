@@ -150,9 +150,10 @@ SET
 WHERE id = $1 AND user_id = $2
 RETURNING *;
 
--- name: DeleteTask :exec
+-- name: DeleteTask :one
 DELETE FROM tasks
-WHERE id = $1 AND user_id = $2;
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent;
 
 
 -- name: AddTaskDependency :exec

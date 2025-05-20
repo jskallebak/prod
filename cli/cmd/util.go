@@ -128,7 +128,7 @@ func getID(mapFunc func() (map[int]int32, error), input int) (int32, error) {
 	return taskID, nil
 }
 
-func appendToMap(m map[int]int32, input int32) (map[int]int32, int, error) {
+func appendToMap(input int32) (map[int]int32, int, error) {
 	taskMap, err := getTaskMap()
 	if err != nil {
 		return nil, 0, err
@@ -146,20 +146,20 @@ func appendToMap(m map[int]int32, input int32) (map[int]int32, int, error) {
 	return taskMap, index, nil
 }
 
-func removeFromMap(m map[int]int32, input string) error {
-	inputInt, err := strconv.Atoi(input)
+func removeFromMap(input int) error {
+	m, err := getTaskMap()
 	if err != nil {
-		return fmt.Errorf("Error converting input to int %w", err)
+		return fmt.Errorf("removeFromMap: getTaskMap: %v", err)
 	}
 
-	fmt.Println("inputInt:", inputInt)
-
-	_, exits := m[inputInt]
+	_, exits := m[int(input)]
 	if !exits {
-		return fmt.Errorf("No tasks with %s ID", input)
+		return fmt.Errorf("No tasks with %d ID", input)
 	}
 
-	delete(m, inputInt)
+	delete(m, int(input))
+	fmt.Println(m)
+	makeTaskMapFile(m)
 
 	return nil
 }
@@ -441,25 +441,6 @@ func ProcessList(tasks []sqlc.Task, q *sqlc.Queries, u *sqlc.User) map[int]int32
 
 	// Return the map of display indices to task IDs
 	return displayIndexToTaskID
-}
-
-// Helper function to get color for level indicators
-func getLevelColor(level int) Color {
-	// Cycle through colors based on level
-	switch level % 5 {
-	case 0:
-		return ColorBrightBlue
-	case 1:
-		return ColorBrightGreen
-	case 2:
-		return ColorBrightMagenta
-	case 3:
-		return ColorBrightCyan
-	case 4:
-		return ColorBrightYellow
-	default:
-		return ColorWhite
-	}
 }
 
 // Helper function to convert priority to a numeric value for ascending sorting (L->M->H)

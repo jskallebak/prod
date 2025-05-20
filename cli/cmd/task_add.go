@@ -173,7 +173,7 @@ For example:
 			return
 		}
 
-		taskMap, index, err := appendToMap(taskMap, task.ID)
+		taskMap, index, err := appendToMap(task.ID)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -271,7 +271,7 @@ func addIMode(user *sqlc.User, ts *services.TaskService) {
 		return
 	}
 
-	taskMap, index, err := appendToMap(taskMap, task.ID)
+	taskMap, index, err := appendToMap(task.ID)
 	if err != nil {
 		fmt.Println(err)
 		return

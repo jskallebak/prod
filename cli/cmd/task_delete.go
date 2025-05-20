@@ -68,10 +68,16 @@ For example:
 				}
 			}
 
-			_, err = taskService.DeleteTask(ctx, int32(taskID), user.ID)
+			_, err = taskService.DeleteTask(ctx, taskID, user.ID)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "task_delete: Error deleting task: %v\n", err)
 				return
+			}
+
+			err = removeFromMap(input)
+			if err != nil {
+				fmt.Println(err)
+
 			}
 
 			fmt.Printf("Task %d deleted successfully\n", input)

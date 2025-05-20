@@ -135,12 +135,10 @@ Priority levels:
 			fmt.Println("Pending tasks:")
 		}
 
-		sl := SortTaskList(tasks)
+		// sl := SortTaskList(tasks)
 		// fmt.Println(sl)
 
-		ProcessList(sl, queries, user)
-
-		taskMap := MakeTaskMap(sl)
+		taskMap := ProcessList(tasks, queries, user)
 		makeTaskMapFile(taskMap)
 	},
 }

@@ -222,8 +222,10 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID int32, userID int
 	return &task, nil
 }
 
-// ListTasks retrieves tasks with optional filtering
 func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *string, project *string, tags []string, status []string, today bool) ([]sqlc.Task, error) {
+	// Print debug information
+	fmt.Printf("DEBUG: ListTasks called with status filter: %v\n", status)
+
 	// Create params object with userID being mandatory
 	params := sqlc.ListTasksParams{
 		UserID: pgtype.Int4{
@@ -268,6 +270,18 @@ func (s *TaskService) ListTasks(ctx context.Context, userID int32, priority *str
 	if err != nil {
 		return nil, fmt.Errorf("failed ListTasks query: %w", err)
 	}
+
+	// Print all task IDs for debugging
+	fmt.Println("DEBUG: Tasks returned from database:")
+	for _, task := range tasks {
+		fmt.Printf("DEBUG: Task ID: %d, Description: %s", task.ID, task.Description)
+		if task.Dependent.Valid {
+			fmt.Printf(", Dependent on: %d\n", task.Dependent.Int32)
+		} else {
+			fmt.Println()
+		}
+	}
+
 	return tasks, nil
 }
 

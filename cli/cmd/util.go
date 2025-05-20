@@ -8,10 +8,12 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
 )
@@ -181,38 +183,93 @@ func findHighestKey(m map[int]int32) (int, error) {
 	return highestKey, nil
 }
 
-func ProcessList(list []sqlc.Task, q *sqlc.Queries, u *sqlc.User) {
-	indent := ""
+// TaskNode represents a task and its subtasks in a tree structure
+type TaskNode struct {
+	Task     sqlc.Task   // The actual task data
+	SubTasks []*TaskNode // Child tasks (subtasks)
+	Index    int         // Display index for the task
+}
 
-	for i, item := range list {
-		if item.Dependent.Valid {
-			fmt.Println("    ↳")
-			indent = "        "
-		} else {
-			indent = ""
+// BuildTaskTree converts a flat list of tasks into a hierarchical tree structure
+func BuildTaskTree(tasks []sqlc.Task) []*TaskNode {
+	// Map to store tasks by their ID for quick lookup
+	taskMap := make(map[int32]*TaskNode)
+
+	// First pass: create nodes for all tasks
+	for i, task := range tasks {
+		taskMap[task.ID] = &TaskNode{
+			Task:     task,
+			SubTasks: []*TaskNode{},
+			Index:    i + 1, // 1-based index for display
 		}
+	}
+
+	// Root tasks (those without parents or with invalid parents)
+	var rootTasks []*TaskNode
+
+	// Second pass: build the tree structure by connecting parents and children
+	for _, node := range taskMap {
+		// If task has a valid dependent (parent task)
+		if node.Task.Dependent.Valid {
+			parentID := node.Task.Dependent.Int32
+			if parent, exists := taskMap[parentID]; exists {
+				// Add this task as a subtask of its parent
+				parent.SubTasks = append(parent.SubTasks, node)
+			} else {
+				// If parent doesn't exist, treat as root task
+				rootTasks = append(rootTasks, node)
+			}
+		} else {
+			// Tasks without parents are root tasks
+			rootTasks = append(rootTasks, node)
+		}
+	}
+
+	return rootTasks
+}
+
+// PrintTaskTree recursively prints a task tree with proper indentation
+func PrintTaskTree(nodes []*TaskNode, q *sqlc.Queries, u *sqlc.User, level int) {
+	// Base indent for the current level
+	baseIndent := strings.Repeat("    ", level)
+
+	for _, node := range nodes {
+		task := node.Task
 
 		// Show task status with checkbox
 		status := "[ ]"
-		if item.CompletedAt.Valid {
+		if task.CompletedAt.Valid {
 			status = "[✓]"
 		}
-		coloredDescription := coloredText(ColorGreen, item.Description)
-		fmt.Printf("%s%s #%d %d %s\n", indent, status, i+1, item.ID, coloredDescription)
 
-		// Show task details with emojis and consistent formatting
-		if item.Status == "active" {
-			fmt.Printf("    %s🎯 Status: %s\n", indent, coloredText(ColorBrightCyan, item.Status)) // Target/goal
+		// For subtasks (level > 0), show an arrow
+		prefix := ""
+		if level > 0 {
+			prefix = "↳ "
+		}
+
+		// Print the task with appropriate indentation
+		coloredDescription := coloredText(ColorGreen, task.Description)
+		fmt.Printf("%s%s%s #%d %s\n", baseIndent, prefix, status, node.Index, coloredDescription)
+
+		// Indent for details is one level deeper than the task itself
+		detailIndent := baseIndent + "    "
+
+		// Print task details with emojis and consistent formatting
+		if task.Status == "active" {
+			fmt.Printf("%s🎯 Status: %s\n", detailIndent, coloredText(ColorBrightCyan, task.Status))
 		} else {
-			fmt.Printf("    %s🎯 Status: %s\n", indent, item.Status) // Target/goal
+			fmt.Printf("%s🎯 Status: %s\n", detailIndent, task.Status)
 		}
-		if item.CompletedAt.Valid {
-			fmt.Printf("    %s✅ Completed: %s\n", indent, item.CompletedAt.Time.Format("2006-01-02 15:04"))
+
+		if task.CompletedAt.Valid {
+			fmt.Printf("%s✅ Completed: %s\n", detailIndent, task.CompletedAt.Time.Format("2006-01-02 15:04"))
 		}
-		if item.Priority.Valid {
+
+		if task.Priority.Valid {
 			// Convert priority letter to full name
 			priorityName := "Unknown"
-			switch item.Priority.String {
+			switch task.Priority.String {
 			case "H":
 				priorityName = coloredText(ColorRed, "High")
 			case "M":
@@ -220,87 +277,423 @@ func ProcessList(list []sqlc.Task, q *sqlc.Queries, u *sqlc.User) {
 			case "L":
 				priorityName = coloredText(ColorGreen, "Low")
 			}
-			fmt.Printf("    %s🔄 Priority: %s\n", indent, priorityName)
+			fmt.Printf("%s🔄 Priority: %s\n", detailIndent, priorityName)
 		} else {
-			fmt.Printf("    %s🔄 Priority: --\n", indent)
+			fmt.Printf("%s🔄 Priority: --\n", detailIndent)
 		}
-		if item.ProjectID.Valid {
+
+		if task.ProjectID.Valid {
 			// Get project name instead of just showing the ID
 			projectService := services.NewProjectService(q)
-			project, err := projectService.GetProject(context.Background(), item.ProjectID.Int32, u.ID)
+			project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, u.ID)
 			if err == nil && project != nil {
-				fmt.Printf("    %s📁 Project: %s\n", indent, project.Name)
+				fmt.Printf("%s📁 Project: %s\n", detailIndent, project.Name)
 			} else {
-				fmt.Printf("    %s📁 Project: ID %d\n", indent, item.ProjectID.Int32)
+				fmt.Printf("%s📁 Project: ID %d\n", detailIndent, task.ProjectID.Int32)
 			}
 		}
-		// else {
-		// 	fmt.Printf("    📁\tProject: --\n")
-		// }
-		if item.StartDate.Valid {
-			fmt.Printf("    %s📅 Started at: %s\n", indent, item.StartDate.Time.Format("Mon, Jan 2, 2006"))
+
+		if task.StartDate.Valid {
+			fmt.Printf("%s📅 Started at: %s\n", detailIndent, task.StartDate.Time.Format("Mon, Jan 2, 2006"))
 		}
-		// else {
-		// 	fmt.Printf("\t📅 Started at: --\n")
-		// }
-		if item.DueDate.Valid {
-			fmt.Printf("    %s📅 Due: %s\n", indent, item.DueDate.Time.Format("Mon, Jan 2, 2006"))
-			if item.DueDate.Time.Format("Mon, Jan 2, 2006") > time.Now().Format("Mon, Jan 2, 2006") {
+
+		if task.DueDate.Valid {
+			fmt.Printf("%s📅 Due: %s\n", detailIndent, task.DueDate.Time.Format("Mon, Jan 2, 2006"))
+
+			// Check if task is overdue
+			if task.DueDate.Time.Before(time.Now()) && task.Status != "completed" {
 				text := coloredText(ColorRed, "Task overdue")
-				fmt.Printf("    ❗ %s\n", text)
-
+				fmt.Printf("%s❗ %s\n", detailIndent, text)
 			}
 		}
-		// else {
-		// 	fmt.Printf("\t📅 Due: --\n")
-		// }
-		if len(item.Tags) > 0 {
-			fmt.Printf("    %s🏷️ Tags: %s\n", indent, strings.Join(item.Tags, ", "))
+
+		if len(task.Tags) > 0 {
+			fmt.Printf("%s🏷️ Tags: %s\n", detailIndent, strings.Join(task.Tags, ", "))
 		}
-		// else {
-		// 	fmt.Printf("\t🏷️ Tags: --\n")
-		// }
 
-		taskMap := MakeTaskMap(list)
-		reverseMap := ReverseMap(taskMap)
+		// Print a blank line between tasks for readability
+		fmt.Println()
 
-		if true {
-			index, exits := reverseMap[item.Dependent.Int32]
-			if exits {
-				fmt.Printf("    %s🔗 Dependent: %d\n", indent, index)
-			}
+		// Recursively print subtasks with increased indentation level
+		if len(node.SubTasks) > 0 {
+			PrintTaskTree(node.SubTasks, q, u, level+1)
 		}
 	}
 }
 
-func SortTaskList(taskList []sqlc.Task) []sqlc.Task {
-	subtaskMap := MakeSubtaskMap(taskList)
-	sortedList := []sqlc.Task{}
-	counter := 0
+// ProcessList processes and displays tasks in a tree structure and returns a map of display index to task ID
+func ProcessList(tasks []sqlc.Task, q *sqlc.Queries, u *sqlc.User) map[int]int32 {
+	// Step 1: Build a map of task ID to task for quick lookups
+	taskMap := make(map[int32]sqlc.Task)
+	for _, task := range tasks {
+		taskMap[task.ID] = task
+	}
 
-	for _, task := range taskList {
-		if task.Dependent.Valid {
-			continue
+	// Step 2: Create a map to track which tasks have been displayed
+	displayed := make(map[int32]bool)
+
+	// Step 3: Create a map to track display index to actual task ID
+	displayIndexToTaskID := make(map[int]int32)
+
+	// Step 4: Get all root tasks (no dependency)
+	var rootTasks []sqlc.Task
+	for _, task := range tasks {
+		if !task.Dependent.Valid {
+			rootTasks = append(rootTasks, task)
+		}
+	}
+
+	// Step 5: Sort root tasks by priority (low -> medium -> high)
+	sort.Slice(rootTasks, func(i, j int) bool {
+		// Convert priorities to numeric values
+		prioI := getPriorityValueAscending(rootTasks[i].Priority)
+		prioJ := getPriorityValueAscending(rootTasks[j].Priority)
+
+		// Sort by priority first
+		if prioI != prioJ {
+			return prioI < prioJ // Low to High
 		}
 
-		sortedList = append(sortedList, task)
+		// If priorities are equal, sort by ID for consistency
+		return rootTasks[i].ID < rootTasks[j].ID
+	})
 
-		// Make a dict with subtasks, if the current task are in the dict, append them
-		subtasks, exits := subtaskMap[task.ID]
-		if exits {
-			for _, subtask := range subtasks {
-				task, err := findTask(taskList, int32(subtask))
-				if err != nil {
-					continue
-				}
+	// Step 6: Track the index for display purposes
+	displayIndex := 1
 
-				sortedList = append(sortedList, task)
+	// Step 7: Recursive function to display a task and all its descendants
+	var displayTask func(task sqlc.Task, level int, prefix string, childPrefix string)
+	displayTask = func(task sqlc.Task, level int, prefix string, childPrefix string) {
+		// Skip if already displayed
+		if displayed[task.ID] {
+			return
+		}
+
+		// Mark as displayed
+		displayed[task.ID] = true
+
+		// Store the mapping of display index to actual task ID
+		thisIndex := displayIndex
+		displayIndexToTaskID[thisIndex] = task.ID
+
+		// Display the task with its prefix
+		status := "[ ]"
+		if task.CompletedAt.Valid {
+			status = "[✓]"
+		}
+
+		coloredDescription := coloredText(ColorGreen, task.Description)
+		fmt.Printf("%s%s #%d %d %s\n", prefix, status, displayIndex, task.ID, coloredDescription)
+		displayIndex++
+
+		// Display task details with consistent formatting
+		detailPrefix := childPrefix + "    "
+
+		// Show task status
+		if task.Status == "active" {
+			fmt.Printf("%s🎯 Status: %s\n", detailPrefix, coloredText(ColorBrightCyan, task.Status))
+		} else {
+			fmt.Printf("%s🎯 Status: %s\n", detailPrefix, task.Status)
+		}
+
+		if task.CompletedAt.Valid {
+			fmt.Printf("%s✅ Completed: %s\n", detailPrefix, task.CompletedAt.Time.Format("2006-01-02 15:04"))
+		}
+
+		if task.Priority.Valid {
+			// Convert priority letter to full name
+			priorityName := "Unknown"
+			switch task.Priority.String {
+			case "H":
+				priorityName = coloredText(ColorRed, "High")
+			case "M":
+				priorityName = coloredText(ColorYellow, "Medium")
+			case "L":
+				priorityName = coloredText(ColorGreen, "Low")
+			}
+			fmt.Printf("%s🔄 Priority: %s\n", detailPrefix, priorityName)
+		} else {
+			fmt.Printf("%s🔄 Priority: --\n", detailPrefix)
+		}
+
+		if task.ProjectID.Valid {
+			projectService := services.NewProjectService(q)
+			project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, u.ID)
+			if err == nil && project != nil {
+				fmt.Printf("%s📁 Project: %s\n", detailPrefix, project.Name)
+			} else {
+				fmt.Printf("%s📁 Project: ID %d\n", detailPrefix, task.ProjectID.Int32)
 			}
 		}
-		counter += 1
 
+		if task.StartDate.Valid {
+			fmt.Printf("%s📅 Started at: %s\n", detailPrefix, task.StartDate.Time.Format("Mon, Jan 2, 2006"))
+		}
+
+		if task.DueDate.Valid {
+			fmt.Printf("%s📅 Due: %s\n", detailPrefix, task.DueDate.Time.Format("Mon, Jan 2, 2006"))
+			if task.DueDate.Time.Before(time.Now()) && task.Status != "completed" {
+				text := coloredText(ColorRed, "Task overdue")
+				fmt.Printf("%s❗ %s\n", detailPrefix, text)
+			}
+		}
+
+		if len(task.Tags) > 0 {
+			fmt.Printf("%s🏷️ Tags: %s\n", detailPrefix, strings.Join(task.Tags, ", "))
+		}
+
+		// Show dependency information
+		if task.Dependent.Valid {
+			// Find the display index for this task's parent
+			parentTaskID := task.Dependent.Int32
+
+			// Find display index for the parent task
+			var parentDisplayIndex int
+			for dispIdx, taskID := range displayIndexToTaskID {
+				if taskID == parentTaskID {
+					parentDisplayIndex = dispIdx
+					break
+				}
+			}
+
+			fmt.Printf("%s🔗 Dependent: %d\n", detailPrefix, parentDisplayIndex)
+		}
+
+		// Find all children of this task
+		var childTasks []sqlc.Task
+		for _, t := range tasks {
+			if t.Dependent.Valid && t.Dependent.Int32 == task.ID {
+				childTasks = append(childTasks, t)
+			}
+		}
+
+		// Skip further processing if no children
+		if len(childTasks) == 0 {
+			return
+		}
+
+		// Sort children by priority (low -> medium -> high)
+		sort.Slice(childTasks, func(i, j int) bool {
+			// Convert priorities to numeric values
+			prioI := getPriorityValueAscending(childTasks[i].Priority)
+			prioJ := getPriorityValueAscending(childTasks[j].Priority)
+
+			// Sort by priority first
+			if prioI != prioJ {
+				return prioI < prioJ // Low to High
+			}
+
+			// If priorities are equal, sort by ID for consistency
+			return childTasks[i].ID < childTasks[j].ID
+		})
+
+		// Display children recursively
+		for i, childTask := range childTasks {
+			isLast := (i == len(childTasks)-1)
+
+			// Determine the prefix for this child and its children
+			var newPrefix, newChildPrefix string
+
+			if isLast {
+				// Last child gets the └── prefix
+				newPrefix = childPrefix + "└── "
+				// Its children get more indentation with spaces
+				newChildPrefix = childPrefix + "    "
+			} else {
+				// Non-last children get the ├── prefix
+				newPrefix = childPrefix + "├── "
+				// Their children get more indentation with a vertical bar
+				newChildPrefix = childPrefix + "│   "
+			}
+
+			displayTask(childTask, level+1, newPrefix, newChildPrefix)
+		}
 	}
-	return sortedList
+
+	// Step 8: Display all root tasks and their hierarchies
+	for _, rootTask := range rootTasks {
+		// Root tasks have empty prefixes
+		displayTask(rootTask, 0, "", "")
+	}
+
+	// Return the map of display indices to task IDs
+	return displayIndexToTaskID
+}
+
+// Helper function to get color for level indicators
+func getLevelColor(level int) Color {
+	// Cycle through colors based on level
+	switch level % 5 {
+	case 0:
+		return ColorBrightBlue
+	case 1:
+		return ColorBrightGreen
+	case 2:
+		return ColorBrightMagenta
+	case 3:
+		return ColorBrightCyan
+	case 4:
+		return ColorBrightYellow
+	default:
+		return ColorWhite
+	}
+}
+
+// Helper function to convert priority to a numeric value for ascending sorting (L->M->H)
+func getPriorityValueAscending(priority pgtype.Text) int {
+	if !priority.Valid {
+		return 0 // No priority (lowest)
+	}
+
+	switch priority.String {
+	case "L":
+		return 1 // Low priority
+	case "M":
+		return 2 // Medium priority
+	case "H":
+		return 3 // High priority
+	default:
+		return 0 // Unknown priority (treat as lowest)
+	}
+}
+
+// SortTaskList sorts tasks hierarchically with consistent ordering
+func SortTaskList(taskList []sqlc.Task) []sqlc.Task {
+	// First, build a map of tasks by ID for quick lookup
+	taskMap := make(map[int32]sqlc.Task)
+	for _, task := range taskList {
+		taskMap[task.ID] = task
+	}
+
+	// Create a map to track the tree depth of each task
+	depthMap := make(map[int32]int)
+
+	// Calculate the depth of each task in the tree
+	for _, task := range taskList {
+		calculateDepth(task.ID, taskMap, depthMap)
+	}
+
+	// Create a sorted copy of the task list
+	sortedTasks := make([]sqlc.Task, len(taskList))
+	copy(sortedTasks, taskList)
+
+	// Sort the tasks by:
+	// 1. Tree path (parent-child hierarchy)
+	// 2. Priority within siblings
+	// 3. ID for consistency
+	sort.Slice(sortedTasks, func(i, j int) bool {
+		taskI := sortedTasks[i]
+		taskJ := sortedTasks[j]
+
+		// Get the complete path to each task
+		pathI := getTaskPath(taskI.ID, taskMap)
+		pathJ := getTaskPath(taskJ.ID, taskMap)
+
+		// Compare paths element by element
+		minLen := len(pathI)
+		if len(pathJ) < minLen {
+			minLen = len(pathJ)
+		}
+
+		for k := 0; k < minLen; k++ {
+			if pathI[k] != pathJ[k] {
+				// If different parent, sort by parent ID
+				return pathI[k] < pathJ[k]
+			}
+		}
+
+		// If one path is a prefix of the other, the shorter one comes first
+		if len(pathI) != len(pathJ) {
+			return len(pathI) < len(pathJ)
+		}
+
+		// If tasks are siblings (same path), sort by priority
+		priorityI := getPriorityValue(taskI.Priority)
+		priorityJ := getPriorityValue(taskJ.Priority)
+
+		if priorityI != priorityJ {
+			return priorityI > priorityJ // Higher priority first
+		}
+
+		// If priority is the same, sort by ID for consistency
+		return taskI.ID < taskJ.ID
+	})
+
+	return sortedTasks
+}
+
+// calculateDepth calculates the depth of a task in the tree recursively
+func calculateDepth(taskID int32, taskMap map[int32]sqlc.Task, depthMap map[int32]int) int {
+	// If we've already calculated the depth, return it
+	if depth, found := depthMap[taskID]; found {
+		return depth
+	}
+
+	task, exists := taskMap[taskID]
+	if !exists {
+		return 0
+	}
+
+	// Root tasks have depth 0
+	if !task.Dependent.Valid {
+		depthMap[taskID] = 0
+		return 0
+	}
+
+	// The depth is one more than the parent's depth
+	parentID := task.Dependent.Int32
+	parentDepth := calculateDepth(parentID, taskMap, depthMap)
+	depth := parentDepth + 1
+	depthMap[taskID] = depth
+
+	return depth
+}
+
+// getTaskPath returns the path from root to the given task as a slice of task IDs
+func getTaskPath(taskID int32, taskMap map[int32]sqlc.Task) []int32 {
+	var path []int32
+
+	// Start with the current task
+	currentID := taskID
+
+	// Build path from task to root
+	for {
+		task, exists := taskMap[currentID]
+		if !exists {
+			break
+		}
+
+		// Add the current task to the beginning of the path
+		path = append([]int32{currentID}, path...)
+
+		// If this is a root task, we're done
+		if !task.Dependent.Valid {
+			break
+		}
+
+		// Move to the parent
+		currentID = task.Dependent.Int32
+	}
+
+	return path
+}
+
+// Helper function to convert priority to a numeric value for sorting
+func getPriorityValue(priority pgtype.Text) int {
+	if !priority.Valid {
+		return 0 // No priority
+	}
+
+	switch priority.String {
+	case "H":
+		return 3 // High priority
+	case "M":
+		return 2 // Medium priority
+	case "L":
+		return 1 // Low priority
+	default:
+		return 0 // Unknown priority
+	}
 }
 
 func MakeTaskMap(taskList []sqlc.Task) map[int]int32 {

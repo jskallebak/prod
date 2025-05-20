@@ -228,99 +228,6 @@ func BuildTaskTree(tasks []sqlc.Task) []*TaskNode {
 	return rootTasks
 }
 
-// PrintTaskTree recursively prints a task tree with proper indentation
-func PrintTaskTree(nodes []*TaskNode, q *sqlc.Queries, u *sqlc.User, level int) {
-	// Base indent for the current level
-	baseIndent := strings.Repeat("    ", level)
-
-	for _, node := range nodes {
-		task := node.Task
-
-		// Show task status with checkbox
-		status := "[ ]"
-		if task.CompletedAt.Valid {
-			status = "[✓]"
-		}
-
-		// For subtasks (level > 0), show an arrow
-		prefix := ""
-		if level > 0 {
-			prefix = "↳ "
-		}
-
-		// Print the task with appropriate indentation
-		coloredDescription := coloredText(ColorGreen, task.Description)
-		fmt.Printf("%s%s%s #%d %s\n", baseIndent, prefix, status, node.Index, coloredDescription)
-
-		// Indent for details is one level deeper than the task itself
-		detailIndent := baseIndent + "    "
-
-		// Print task details with emojis and consistent formatting
-		if task.Status == "active" {
-			fmt.Printf("%s🎯 Status: %s\n", detailIndent, coloredText(ColorBrightCyan, task.Status))
-		} else {
-			fmt.Printf("%s🎯 Status: %s\n", detailIndent, task.Status)
-		}
-
-		if task.CompletedAt.Valid {
-			fmt.Printf("%s✅ Completed: %s\n", detailIndent, task.CompletedAt.Time.Format("2006-01-02 15:04"))
-		}
-
-		if task.Priority.Valid {
-			// Convert priority letter to full name
-			priorityName := "Unknown"
-			switch task.Priority.String {
-			case "H":
-				priorityName = coloredText(ColorRed, "High")
-			case "M":
-				priorityName = coloredText(ColorYellow, "Medium")
-			case "L":
-				priorityName = coloredText(ColorGreen, "Low")
-			}
-			fmt.Printf("%s🔄 Priority: %s\n", detailIndent, priorityName)
-		} else {
-			fmt.Printf("%s🔄 Priority: --\n", detailIndent)
-		}
-
-		if task.ProjectID.Valid {
-			// Get project name instead of just showing the ID
-			projectService := services.NewProjectService(q)
-			project, err := projectService.GetProject(context.Background(), task.ProjectID.Int32, u.ID)
-			if err == nil && project != nil {
-				fmt.Printf("%s📁 Project: %s\n", detailIndent, project.Name)
-			} else {
-				fmt.Printf("%s📁 Project: ID %d\n", detailIndent, task.ProjectID.Int32)
-			}
-		}
-
-		if task.StartDate.Valid {
-			fmt.Printf("%s📅 Started at: %s\n", detailIndent, task.StartDate.Time.Format("Mon, Jan 2, 2006"))
-		}
-
-		if task.DueDate.Valid {
-			fmt.Printf("%s📅 Due: %s\n", detailIndent, task.DueDate.Time.Format("Mon, Jan 2, 2006"))
-
-			// Check if task is overdue
-			if task.DueDate.Time.Before(time.Now()) && task.Status != "completed" {
-				text := coloredText(ColorRed, "Task overdue")
-				fmt.Printf("%s❗ %s\n", detailIndent, text)
-			}
-		}
-
-		if len(task.Tags) > 0 {
-			fmt.Printf("%s🏷️ Tags: %s\n", detailIndent, strings.Join(task.Tags, ", "))
-		}
-
-		// Print a blank line between tasks for readability
-		fmt.Println()
-
-		// Recursively print subtasks with increased indentation level
-		if len(node.SubTasks) > 0 {
-			PrintTaskTree(node.SubTasks, q, u, level+1)
-		}
-	}
-}
-
 // ProcessList processes and displays tasks in a tree structure and returns a map of display index to task ID
 func ProcessList(tasks []sqlc.Task, q *sqlc.Queries, u *sqlc.User) map[int]int32 {
 	// Step 1: Build a map of task ID to task for quick lookups
@@ -432,7 +339,23 @@ func ProcessList(tasks []sqlc.Task, q *sqlc.Queries, u *sqlc.User) map[int]int32
 
 		if task.DueDate.Valid {
 			fmt.Printf("%s📅 Due: %s\n", detailPrefix, task.DueDate.Time.Format("Mon, Jan 2, 2006"))
-			if task.DueDate.Time.Before(time.Now()) && task.Status != "completed" {
+
+			// Get today's date (without time component)
+			now := time.Now()
+			today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			// tomorrow := today.AddDate(0, 0, 1)
+
+			// Get due date without time component
+			dueDate := time.Date(
+				task.DueDate.Time.Year(),
+				task.DueDate.Time.Month(),
+				task.DueDate.Time.Day(),
+				0, 0, 0, 0,
+				task.DueDate.Time.Location(),
+			)
+
+			// Task is overdue if the due date is strictly before today
+			if dueDate.Before(today) && task.Status != "completed" {
 				text := coloredText(ColorRed, "Task overdue")
 				fmt.Printf("%s❗ %s\n", detailPrefix, text)
 			}

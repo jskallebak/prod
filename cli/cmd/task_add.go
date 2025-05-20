@@ -122,10 +122,31 @@ For example:
 		if cmd.Flags().Changed("subtask") {
 			// converting input to DB id for foreign-key
 			dbIndex, exits := taskMap[dependent]
+			input := 0
 			if exits {
 				params.Dependent = int32(dbIndex)
 			} else {
-				params.Dependent = int32(0)
+				fmt.Println("Subtask does not exists")
+				fmt.Println("Enter another subtask. (Enter for none)")
+				for {
+					_, err := fmt.Scanln(&input)
+					if err != nil {
+						fmt.Println("Must be a number (Enter for none)")
+					}
+
+					if input == 0 {
+						params.Dependent = int32(0)
+						break
+					}
+
+					dbIndex, exits := taskMap[input]
+					if exits {
+						params.Dependent = int32(dbIndex)
+						break
+					}
+					fmt.Println("Subtask does not exists")
+					fmt.Println("Enter another subtask. (Enter for none)")
+				}
 			}
 		}
 

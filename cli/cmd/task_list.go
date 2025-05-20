@@ -100,7 +100,8 @@ Priority levels:
 		} else if showCompleted {
 			status = []string{"completed"}
 		} else if showAll {
-			status = []string{"pending", "active", "completed"}
+			status = []string{"pending", "active"}
+			projectPtr = nil
 		}
 
 		tasks, err := taskService.ListTasks(context.Background(), user.ID, priorityPtr, projectPtr, tagsList, status, showToday)
@@ -159,7 +160,7 @@ func init() {
 	listCmd.Flags().StringSliceVarP(&tagsList, "tags", "t", []string{}, "Filter tasks by project")
 
 	// Add completed flag
-	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all tasks (including completed)")
+	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show tasks from all projects")
 
 	listCmd.Flags().BoolVarP(&showCompleted, "completed", "c", false, "Show completed tasks")
 

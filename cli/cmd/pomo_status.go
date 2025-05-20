@@ -67,8 +67,8 @@ Examples:
 			fmt.Println("🍅 Pomodoro session is ACTIVE")
 			fmt.Printf("Started at: %s\n", startTime.Format("15:04:05"))
 			fmt.Printf("Current time: %s\n", now.Format("15:04:05"))
-			fmt.Printf("Time elapsed: %s\n", formatDuration(elapsedTime))
-			fmt.Printf("Time remaining: %s\n", formatDuration(remainingTime))
+			fmt.Printf("Time elapsed: %s\n", util.FormatDuration(elapsedTime))
+			fmt.Printf("Time remaining: %s\n", util.FormatDuration(remainingTime))
 
 			// Progress bar (25 chars wide)
 			progress := 1.0
@@ -101,9 +101,9 @@ Examples:
 			fmt.Println("⏸️  Pomodoro session is PAUSED")
 			fmt.Printf("Started at: %s\n", startTime.Format("15:04:05"))
 			fmt.Printf("Paused at: %s\n", pauseTime.Format("15:04:05"))
-			fmt.Printf("Pause duration: %s\n", formatDuration(pauseDuration))
-			fmt.Printf("Active time: %s\n", formatDuration(elapsedTime))
-			fmt.Printf("Time remaining: %s\n", formatDuration(remainingTime))
+			fmt.Printf("Pause duration: %s\n", util.FormatDuration(pauseDuration))
+			fmt.Printf("Active time: %s\n", util.FormatDuration(elapsedTime))
+			fmt.Printf("Time remaining: %s\n", util.FormatDuration(remainingTime))
 
 			// Progress bar (25 chars wide)
 			progress := 1.0

@@ -22,7 +22,7 @@ For example:
 	// Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
-		inputs, err := ParseArgs(args)
+		inputs, err := util.ParseArgs(args)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -44,13 +44,17 @@ For example:
 		}
 
 		for _, input := range inputs {
-			taskID, err := getID(getTaskMap, input)
+			taskID, err := services.GetID(services.GetTaskMap, input)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "doneCmd: getID: %v\n", err)
 				return
 			}
 
-			err = RecursiveSubtasks(ctx, user.ID, taskID, taskService, "finish", input, taskService.CompleteTask)
+			adaptedConfirm := func(ctx context.Context, taskID int32, userID int32, action string, ts *services.TaskService) error {
+				return ConfirmCmd(ctx, taskID, userID, ActionType(action), ts)
+			}
+
+			err = services.RecursiveSubtasks(ctx, user.ID, taskID, taskService, "finish", input, adaptedConfirm, taskService.CompleteTask)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "doneCmd: %v\n", err)
 				return

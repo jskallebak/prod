@@ -67,7 +67,7 @@ Examples:
 		fmt.Printf("Started at: %s\n", startTime.Format("15:04:05"))
 		fmt.Printf("Current time: %s\n", time.Now().Format("15:04:05"))
 		fmt.Printf("Work until: %s\n", endTime.Format("15:04:05"))
-		fmt.Printf("Total pause time: %s\n", formatDuration(pauseDuration))
+		fmt.Printf("Total pause time: %s\n", util.FormatDuration(pauseDuration))
 
 		if resumedSession.TaskID != nil {
 			taskService := services.NewTaskService(queries)

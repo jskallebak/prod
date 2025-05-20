@@ -47,7 +47,7 @@ Available flags:
 	// Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse task ID from arguments
-		inputs, err := ParseArgs(args)
+		inputs, err := util.ParseArgs(args)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -68,7 +68,7 @@ Available flags:
 		}
 
 		for _, input := range inputs {
-			taskID, err := getID(getTaskMap, input)
+			taskID, err := services.GetID(services.GetTaskMap, input)
 			ctx := context.Background()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: Invalid task ID\n")

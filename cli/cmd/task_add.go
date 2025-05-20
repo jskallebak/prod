@@ -57,7 +57,7 @@ For example:
 			fmt.Fprintf(os.Stderr, "Error getting the user: %v\n", err)
 		}
 
-		taskMap, err := getTaskMap()
+		taskMap, err := services.GetTaskMap()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -173,13 +173,13 @@ For example:
 			return
 		}
 
-		taskMap, index, err := appendToMap(task.ID)
+		taskMap, index, err := services.AppendToMap(task.ID)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		err = makeTaskMapFile(taskMap)
+		err = services.MakeTaskMapFile(taskMap)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -235,7 +235,7 @@ func addIMode(user *sqlc.User, ts *services.TaskService) {
 	fmt.Printf("If this task is gonna be subtask, enter ID of main task: ")
 	fmt.Scanln(&subtask)
 	if subtask != 0 {
-		taskMap, err := getTaskMap()
+		taskMap, err := services.GetTaskMap()
 		if err != nil {
 			fmt.Println("error getting task map.")
 			return
@@ -259,7 +259,7 @@ func addIMode(user *sqlc.User, ts *services.TaskService) {
 
 	params.Tags = tags
 
-	taskMap, err := getTaskMap()
+	taskMap, err := services.GetTaskMap()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err)
 		return
@@ -271,13 +271,13 @@ func addIMode(user *sqlc.User, ts *services.TaskService) {
 		return
 	}
 
-	taskMap, index, err := appendToMap(task.ID)
+	taskMap, index, err := services.AppendToMap(task.ID)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	err = makeTaskMapFile(taskMap)
+	err = services.MakeTaskMapFile(taskMap)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
@@ -95,7 +96,9 @@ Priority levels:
 
 		// Status filter - by default only show pending and active tasks
 		var status []string
-		if !showCompleted && !showAll {
+		if showToday {
+			status = []string{"pending", "active", "completed"}
+		} else if !showCompleted && !showAll {
 			status = []string{"pending", "active"}
 		} else if showCompleted {
 			status = []string{"completed"}
@@ -108,6 +111,25 @@ Priority levels:
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting list of tasks: %v\n", err)
 			return
+		}
+
+		if showToday {
+			now := time.Now()
+			filtered := tasks[:0]
+			for _, t := range tasks {
+				fmt.Printf("DEBUG: Task %d status=%s due=%v\n", t.ID, t.Status, t.DueDate)
+				if t.Status == "completed" {
+					if t.DueDate.Valid {
+						due := t.DueDate.Time
+						if due.Year() == now.Year() && due.Month() == now.Month() && due.Day() == now.Day() {
+							filtered = append(filtered, t)
+						}
+					}
+				} else {
+					filtered = append(filtered, t)
+				}
+			}
+			tasks = filtered
 		}
 
 		if len(tasks) == 0 {
@@ -124,7 +146,10 @@ Priority levels:
 				fmt.Println("\nTip: Create a task with: prod task add \"My first task\"")
 			}
 			taskMap := map[int]int32{}
-			makeTaskMapFile(taskMap)
+			err := services.MakeTaskMapFile(taskMap)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error making task map file: %v\n", err)
+			}
 			return
 		}
 
@@ -138,8 +163,11 @@ Priority levels:
 		// sl := SortTaskList(tasks)
 		// fmt.Println(sl)
 
-		taskMap := ProcessList(tasks, queries, user)
-		makeTaskMapFile(taskMap)
+		taskMap := services.ProcessList(tasks, queries, user)
+		err = services.MakeTaskMapFile(taskMap)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error making task map file: %v\n", err)
+		}
 	},
 }
 
@@ -157,11 +185,13 @@ func init() {
 
 	listCmd.Flags().StringSliceVarP(&tagsList, "tags", "t", []string{}, "Filter tasks by project")
 
-	// Add completed flag
+	// Add all flag
 	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show tasks from all projects")
 
+	// Add completed flag
 	listCmd.Flags().BoolVarP(&showCompleted, "completed", "c", false, "Show completed tasks")
 
+	// Add today flag
 	listCmd.Flags().BoolVar(&showToday, "today", false, "Show tasks for today")
 
 	// Here you will define your flags and configuration settings.

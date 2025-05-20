@@ -30,7 +30,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("tag called.")
-		inputs, err := ParseArgs(args)
+		inputs, err := util.ParseArgs(args)
 
 		dbpool, queries, ok := util.InitDBAndQueriesCLI()
 		if !ok {
@@ -48,7 +48,7 @@ to quickly create a Cobra application.`,
 		}
 
 		for _, input := range inputs {
-			taskID, err := getID(getTaskMap, input)
+			taskID, err := services.GetID(services.GetTaskMap, input)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%v", err)
 				return

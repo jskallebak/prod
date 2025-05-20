@@ -48,13 +48,13 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		inputs, err := ParseArgs(args)
+		inputs, err := util.ParseArgs(args)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "due: error in ParseArgs: %v\n", err)
 		}
 
 		for _, input := range inputs {
-			taskID, err := getID(getTaskMap, input)
+			taskID, err := services.GetID(services.GetTaskMap, input)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "due_today: error invalid task ID\n")
 				return

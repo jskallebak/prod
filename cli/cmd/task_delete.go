@@ -26,7 +26,7 @@ For example:
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 		// Parse task ID from arguments
-		inputs, err := ParseArgs(args)
+		inputs, err := util.ParseArgs(args)
 
 		// Initialize DB connection
 		dbpool, err := util.InitDB()
@@ -47,21 +47,25 @@ For example:
 			return
 		}
 
+		adaptedConfirm := func(ctx context.Context, taskID int32, userID int32, action string, ts *services.TaskService) error {
+			return ConfirmCmd(ctx, taskID, userID, ActionType(action), ts)
+		}
+
 		for _, input := range inputs {
-			taskID, err := getID(getTaskMap, input)
+			taskID, err := services.GetID(services.GetTaskMap, input)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				return
 			}
 
-			err = RecursiveSubtasks(ctx, user.ID, taskID, taskService, "delete", input, taskService.DeleteTask)
+			err = services.RecursiveSubtasks(ctx, user.ID, taskID, taskService, "delete", input, adaptedConfirm, taskService.DeleteTask)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "DeleteCmd: %v", err)
 				return
 			}
 
 			if !confirmDelete {
-				err = ConfirmCmd(ctx, taskID, user.ID, DELETE, taskService)
+				err = adaptedConfirm(ctx, taskID, user.ID, string(DELETE), taskService)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
 					return
@@ -74,10 +78,9 @@ For example:
 				return
 			}
 
-			err = removeFromMap(input)
+			err = services.RemoveFromMap(input)
 			if err != nil {
 				fmt.Println(err)
-
 			}
 
 			fmt.Printf("Task %d deleted successfully\n", input)

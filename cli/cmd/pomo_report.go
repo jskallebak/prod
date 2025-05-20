@@ -127,21 +127,21 @@ Examples:
 			float64(report.CancelledSessions)/float64(report.TotalSessions)*100)
 
 		// Time stats
-		fmt.Printf("\nTotal Time: %s\n", formatDurationSeconds(report.TotalTimeSeconds))
+		fmt.Printf("\nTotal Time: %s\n", util.FormatDurationSeconds(report.TotalTimeSeconds))
 		fmt.Printf("Work Time: %s (%.1f%%)\n",
-			formatDurationSeconds(report.WorkTimeSeconds),
+			util.FormatDurationSeconds(report.WorkTimeSeconds),
 			float64(report.WorkTimeSeconds)/float64(report.TotalTimeSeconds)*100)
 		fmt.Printf("Break Time: %s (%.1f%%)\n",
-			formatDurationSeconds(report.BreakTimeSeconds),
+			util.FormatDurationSeconds(report.BreakTimeSeconds),
 			float64(report.BreakTimeSeconds)/float64(report.TotalTimeSeconds)*100)
 		fmt.Printf("Pause Time: %s (%.1f%%)\n",
-			formatDurationSeconds(report.PauseTimeSeconds),
+			util.FormatDurationSeconds(report.PauseTimeSeconds),
 			float64(report.PauseTimeSeconds)/float64(report.TotalTimeSeconds)*100)
 
 		// Productivity stats
-		fmt.Printf("\nAverage Session: %s\n", formatDurationSeconds(report.AvgSessionSeconds))
-		fmt.Printf("Average Work Session: %s\n", formatDurationSeconds(report.AvgWorkSessionSeconds))
-		fmt.Printf("Average Break: %s\n", formatDurationSeconds(report.AvgBreakSeconds))
+		fmt.Printf("\nAverage Session: %s\n", util.FormatDurationSeconds(report.AvgSessionSeconds))
+		fmt.Printf("Average Work Session: %s\n", util.FormatDurationSeconds(report.AvgWorkSessionSeconds))
+		fmt.Printf("Average Break: %s\n", util.FormatDurationSeconds(report.AvgBreakSeconds))
 
 		// Display daily breakdown if available
 		if len(report.DailyStats) > 0 {
@@ -158,7 +158,7 @@ Examples:
 				fmt.Printf("%-12s %-12d %-12s %.1f%%\n",
 					day.Date.Format("2006-01-02"),
 					day.TotalSessions,
-					formatDurationSeconds(day.WorkTimeSeconds),
+					util.FormatDurationSeconds(day.WorkTimeSeconds),
 					completionRate)
 			}
 		}
@@ -179,7 +179,7 @@ Examples:
 					task.ID,
 					description,
 					task.SessionCount,
-					formatDurationSeconds(task.TotalTimeSeconds))
+					util.FormatDurationSeconds(task.TotalTimeSeconds))
 			}
 		}
 

@@ -94,7 +94,7 @@ Examples:
 
 		fmt.Printf("Started: %s\n", startTime.Format("15:04:05"))
 		fmt.Printf("Ended: %s\n", endTime.Format("15:04:05"))
-		fmt.Printf("Duration: %s\n", formatDuration(duration))
+		fmt.Printf("Duration: %s\n", util.FormatDuration(duration))
 
 		if stoppedSession.TaskID != nil {
 			taskService := services.NewTaskService(queries)

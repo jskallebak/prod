@@ -24,7 +24,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		inputs, err := ParseArgs(args)
+		inputs, err := util.ParseArgs(args)
 		ctx := context.Background()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "pause: error in ParseArgs: %v", err)
@@ -48,9 +48,19 @@ to quickly create a Cobra application.`,
 		}
 
 		for _, input := range inputs {
-			taskID, err := getID(getTaskMap, input)
+			taskID, err := services.GetID(services.GetTaskMap, input)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error invalid task ID\n")
+				return
+			}
+
+			adaptedConfirm := func(ctx context.Context, taskID int32, userID int32, action string, ts *services.TaskService) error {
+				return ConfirmCmd(ctx, taskID, userID, ActionType(action), ts)
+			}
+
+			err = services.RecursiveSubtasks(ctx, user.ID, taskID, taskService, "pause", input, adaptedConfirm, taskService.PauseTask)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
 				return
 			}
 

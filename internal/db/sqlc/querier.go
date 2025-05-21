@@ -14,6 +14,7 @@ type Querier interface {
 	AddTaskDependency(ctx context.Context, arg AddTaskDependencyParams) error
 	AttachTaskToPomodoro(ctx context.Context, arg AttachTaskToPomodoroParams) (PomodoroSession, error)
 	ClearActiveProject(ctx context.Context, id int32) error
+	ClearRecurrence(ctx context.Context, arg ClearRecurrenceParams) (Task, error)
 	ClearTags(ctx context.Context, arg ClearTagsParams) error
 	CompleteTask(ctx context.Context, arg CompleteTaskParams) (Task, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (CountTasksRow, error)

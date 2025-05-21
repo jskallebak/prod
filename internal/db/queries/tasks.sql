@@ -252,3 +252,11 @@ SET
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent;
+
+-- name: ClearRecurrence :one
+UPDATE tasks
+SET
+    recurrence = NULL,
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING *;

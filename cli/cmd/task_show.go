@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
@@ -70,51 +71,120 @@ For example:
 		if task.CompletedAt.Valid {
 			status = "[✓]"
 		}
-		fmt.Printf("%s #%s %s\n", status, input, task.Description)
 
-		// Show task details with emojis and consistent formatting
-		if task.CompletedAt.Valid {
-			fmt.Printf("    ✅\tCompleted: %s\n", task.CompletedAt.Time.Format("2006-01-02 15:04"))
-		}
+		// Show task details
+		fmt.Printf("\n%s %s\n", status, task.Description)
+		fmt.Printf("ID: %d\n", input)
+
+		// Show priority if set
 		if task.Priority.Valid {
-			// Convert priority letter to full name
-			priorityName := "Unknown"
-			switch task.Priority.String {
-			case "H":
-				priorityName = "High"
-			case "M":
-				priorityName = "Medium"
-			case "L":
-				priorityName = "Low"
-			}
-			fmt.Printf("    🔄\tPriority: %s\n", priorityName)
-		} else {
-			fmt.Printf("    🔄\tPriority: --\n")
+			fmt.Printf("Priority: %s\n", task.Priority.String)
 		}
+
+		// Show project if set
 		if task.ProjectID.Valid {
-			fmt.Printf("    📁\tProject: %s\n", projectName)
-		} else {
-			fmt.Printf("    📁\tProject: --\n")
+			fmt.Printf("Project: %s\n", projectName)
 		}
+
+		// Show dates
 		if task.DueDate.Valid {
-			fmt.Printf("    📅\tDue: %s\n", task.DueDate.Time.Format("Mon, Jan 2, 2006"))
-		} else {
-			fmt.Printf("    📅\tDue: --\n")
+			fmt.Printf("Due: %s\n", task.DueDate.Time.Format("2006-01-02"))
 		}
-		if len(task.Tags) > 0 {
-			fmt.Printf("    🏷️\tTags: %s\n", strings.Join(task.Tags, ", "))
-		} else {
-			fmt.Printf("    🏷️\tTags: --\n")
-		}
-		fmt.Println()
-
 		if task.StartDate.Valid {
-			fmt.Printf("Start date: %s\n", task.StartDate.Time.Format("2006-01-02"))
+			fmt.Printf("Start: %s\n", task.StartDate.Time.Format("2006-01-02"))
+		}
+		if task.CompletedAt.Valid {
+			fmt.Printf("Completed: %s\n", task.CompletedAt.Time.Format("2006-01-02"))
 		}
 
-		if task.Recurrence.Valid {
+		// Show recurrence if set
+		if task.Recurrence.Valid && task.Recurrence.String != "" {
 			fmt.Printf("Recurrence: %s\n", task.Recurrence.String)
+
+			// Try to parse and display in a more readable format
+			pattern, err := services.ParseRecurrence(task.Recurrence.String)
+			if err == nil {
+				fmt.Printf("Repeats: ")
+				switch pattern.Type {
+				case services.RecurrenceDaily:
+					if pattern.Interval == 1 {
+						fmt.Printf("Daily")
+					} else {
+						fmt.Printf("Every %d days", pattern.Interval)
+					}
+				case services.RecurrenceWeekly:
+					if pattern.Interval == 1 {
+						fmt.Printf("Weekly")
+					} else {
+						fmt.Printf("Every %d weeks", pattern.Interval)
+					}
+					if len(pattern.WeekDays) > 0 {
+						// Convert weekday numbers to names
+						weekdayNames := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+						var days []string
+						for _, day := range pattern.WeekDays {
+							if day >= 1 && day <= 7 {
+								days = append(days, weekdayNames[day-1])
+							}
+						}
+						fmt.Printf(" on %s", strings.Join(days, ", "))
+					}
+				case services.RecurrenceMonthly:
+					if pattern.Interval == 1 {
+						fmt.Printf("Monthly")
+					} else {
+						fmt.Printf("Every %d months", pattern.Interval)
+					}
+					if pattern.MonthDay > 0 {
+						fmt.Printf(" on day %d", pattern.MonthDay)
+					}
+				case services.RecurrenceYearly:
+					if pattern.Interval == 1 {
+						fmt.Printf("Yearly")
+					} else {
+						fmt.Printf("Every %d years", pattern.Interval)
+					}
+					if pattern.YearlyDate != nil {
+						monthNames := []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+						if pattern.YearlyDate.Month >= 1 && pattern.YearlyDate.Month <= 12 {
+							fmt.Printf(" on %s %d", monthNames[pattern.YearlyDate.Month-1], pattern.YearlyDate.Day)
+						}
+					}
+				}
+				fmt.Println()
+
+				// Show until/count if set
+				if pattern.Until != nil {
+					fmt.Printf("Until: %s\n", pattern.Until.Format("2006-01-02"))
+				}
+				if pattern.Count > 0 {
+					fmt.Printf("Occurrences: %d\n", pattern.Count)
+				}
+
+				// Show next occurrence if possible
+				if task.Status != "completed" {
+					var referenceDate time.Time
+					if task.DueDate.Valid {
+						referenceDate = task.DueDate.Time
+					} else {
+						referenceDate = time.Now()
+					}
+					nextDate, err := services.GetNextOccurrence(*pattern, referenceDate)
+					if err == nil {
+						fmt.Printf("Next occurrence: %s\n", nextDate.Format("2006-01-02"))
+					}
+				}
+			}
 		}
+
+		// Show tags if any
+		if len(task.Tags) > 0 {
+			fmt.Printf("Tags: %s\n", strings.Join(task.Tags, ", "))
+		} else {
+			fmt.Printf("Tags: --\n")
+		}
+
+		fmt.Println()
 
 		if task.Notes.Valid && task.Notes.String != "" {
 			fmt.Printf("Notes: %s\n", task.Notes.String)

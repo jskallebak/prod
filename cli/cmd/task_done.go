@@ -67,15 +67,34 @@ For example:
 			}
 
 			// Complete the task
-			completedTask, err := taskService.CompleteTask(ctx, taskID, user.ID)
+			completedTask, newTask, err := taskService.CompleteRecurringTask(ctx, taskID, user.ID)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "doneCmd: taskService.CompleteTask: %v\n", err)
+				fmt.Fprintf(os.Stderr, "doneCmd: taskService.CompleteRecurringTask: %v\n", err)
 				return
 			}
 
 			fmt.Printf("Task %d marked as completed\n", input)
 			fmt.Printf("Description: %s\n", completedTask.Description)
 			fmt.Printf("Completed at: %s\n", completedTask.CompletedAt.Time.Format("2006-01-02 15:04:05"))
+
+			// If this was a recurring task and a new task was created
+			if newTask != nil {
+				// Get a new task display ID for the newly created task
+				taskMap, index, err := services.AppendToMap(newTask.ID)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error adding new recurring task to map: %v\n", err)
+				} else {
+					err = services.MakeTaskMapFile(taskMap)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error updating task map: %v\n", err)
+					}
+
+					fmt.Printf("\nNext occurrence created as task %d\n", index)
+					if newTask.DueDate.Valid {
+						fmt.Printf("Due: %s\n", newTask.DueDate.Time.Format("2006-01-02"))
+					}
+				}
+			}
 		}
 	},
 }

@@ -442,3 +442,60 @@ func (s TaskService) GetDependent(ctx context.Context, userID int32, taskID int3
 
 	return result, nil
 }
+
+// UpdateTaskRecurrence updates the recurrence pattern for a task
+func (s *TaskService) UpdateTaskRecurrence(ctx context.Context, taskID, userID int32, recurrence string) (*sqlc.Task, error) {
+	// Special case for clearing recurrence (empty string)
+	if recurrence == "" {
+		// Use the dedicated ClearRecurrence query to set recurrence=NULL
+		clearParams := sqlc.ClearRecurrenceParams{
+			ID: taskID,
+			UserID: pgtype.Int4{
+				Int32: userID,
+				Valid: true,
+			},
+		}
+
+		task, err := s.queries.ClearRecurrence(ctx, clearParams)
+		if err != nil {
+			return nil, fmt.Errorf("failed to clear recurrence: %w", err)
+		}
+
+		return &task, nil
+	}
+
+	// For non-empty recurrence, validate the pattern
+	_, err := ParseRecurrence(recurrence)
+	if err != nil {
+		return nil, fmt.Errorf("invalid recurrence pattern: %w", err)
+	}
+
+	// Create update parameters to set the recurrence value
+	updateParams := sqlc.UpdateTaskParams{
+		ID: taskID,
+		UserID: pgtype.Int4{
+			Int32: userID,
+			Valid: true,
+		},
+		Description: "",
+		Status:      "",
+		Priority:    pgtype.Text{Valid: false},
+		DueDate:     pgtype.Timestamptz{Valid: false},
+		StartDate:   pgtype.Timestamptz{Valid: false},
+		ProjectID:   pgtype.Int4{Valid: false},
+		Recurrence: pgtype.Text{
+			String: recurrence,
+			Valid:  true,
+		},
+		Tags:  nil,
+		Notes: pgtype.Text{Valid: false},
+	}
+
+	// Update the task
+	task, err := s.queries.UpdateTask(ctx, updateParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update task recurrence: %w", err)
+	}
+
+	return &task, nil
+}

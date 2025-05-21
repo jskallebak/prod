@@ -30,6 +30,43 @@ func (q *Queries) AddTaskDependency(ctx context.Context, arg AddTaskDependencyPa
 	return err
 }
 
+const clearRecurrence = `-- name: ClearRecurrence :one
+UPDATE tasks
+SET
+    recurrence = NULL,
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, description, status, priority, due_date, start_date, completed_at, project_id, recurrence, tags, notes, created_at, updated_at, dependent
+`
+
+type ClearRecurrenceParams struct {
+	ID     int32       `json:"id"`
+	UserID pgtype.Int4 `json:"user_id"`
+}
+
+func (q *Queries) ClearRecurrence(ctx context.Context, arg ClearRecurrenceParams) (Task, error) {
+	row := q.db.QueryRow(ctx, clearRecurrence, arg.ID, arg.UserID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Description,
+		&i.Status,
+		&i.Priority,
+		&i.DueDate,
+		&i.StartDate,
+		&i.CompletedAt,
+		&i.ProjectID,
+		&i.Recurrence,
+		&i.Tags,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Dependent,
+	)
+	return i, err
+}
+
 const clearTags = `-- name: ClearTags :exec
 UPDATE tasks
 SET

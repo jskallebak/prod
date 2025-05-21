@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/jskallebak/prod/internal/db/sqlc"
 	"github.com/jskallebak/prod/internal/services"
 	"github.com/jskallebak/prod/internal/util"
 	"github.com/spf13/cobra"
@@ -25,6 +27,7 @@ var (
 	showCompleted bool
 	showAll       bool
 	showToday     bool
+	showTable     bool
 )
 
 var listCmd = &cobra.Command{
@@ -117,7 +120,6 @@ Priority levels:
 			now := time.Now()
 			filtered := tasks[:0]
 			for _, t := range tasks {
-				fmt.Printf("DEBUG: Task %d status=%s due=%v\n", t.ID, t.Status, t.DueDate)
 				if t.Status == "completed" {
 					if t.DueDate.Valid {
 						due := t.DueDate.Time
@@ -160,13 +162,24 @@ Priority levels:
 			fmt.Println("Pending tasks:")
 		}
 
-		// sl := SortTaskList(tasks)
-		// fmt.Println(sl)
-
-		taskMap := services.ProcessList(tasks, queries, user)
-		err = services.MakeTaskMapFile(taskMap)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error making task map file: %v\n", err)
+		if showTable {
+			// Use a simple map for table view (ID to ID)
+			taskMap := make(map[int]int32)
+			for i, t := range tasks {
+				taskMap[i+1] = t.ID
+			}
+			PrintTaskTableList(tasks, taskMap, queries, user)
+			err = services.MakeTaskMapFile(taskMap)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error making task map file: %v\n", err)
+			}
+		} else {
+			// Print and get the map from the multi-line function
+			taskMap := PrintTaskMultiLineList(tasks, queries, user)
+			err = services.MakeTaskMapFile(taskMap)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error making task map file: %v\n", err)
+			}
 		}
 	},
 }
@@ -194,6 +207,9 @@ func init() {
 	// Add today flag
 	listCmd.Flags().BoolVar(&showToday, "today", false, "Show tasks for today")
 
+	// Add table flag
+	listCmd.Flags().BoolVarP(&showTable, "table", "T", false, "Show tasks in Taskwarrior-style table format")
+
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
@@ -203,4 +219,244 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+// padAnsi will be moved to after the colors constants are defined in PrintTaskTableRow
+
+func PrintTaskTableHeader() {
+	fmt.Printf("%-4s %-40s %-6s %-12s %-15s %-12s %-12s %-20s\n",
+		"ID", "Description", "Pri", "Due", "Tags", "Proj", "Status", "Completed")
+}
+
+// ansiRegexp to match ANSI color codes
+var ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+func PrintTaskTableRow(displayIdx int, task sqlc.Task, projectName string, altBg bool) {
+	// ANSI colors
+	const (
+		reset        = "\033[0m"
+		red          = "\033[31m"
+		green        = "\033[32m"
+		yellow       = "\033[33m"
+		brightYellow = "\033[93m"
+		brightGreen  = "\033[92m"
+		brightCyan   = "\033[96m"
+		darkGrayBg   = "\033[48;5;236m"
+	)
+
+	// Column widths (all inclusive of spacing)
+	const (
+		idWidth        = 5  // 4 + 1 space
+		descWidth      = 41 // 40 + 1 space
+		priWidth       = 7  // 6 + 1 space
+		dueWidth       = 13 // 12 + 1 space
+		tagsWidth      = 16 // 15 + 1 space
+		projWidth      = 13 // 12 + 1 space
+		statusWidth    = 13 // 12 + 1 space
+		completedWidth = 20 // no trailing space needed
+	)
+
+	// Process the data
+	id := fmt.Sprintf("%-*s", idWidth, fmt.Sprintf("%d", displayIdx))
+
+	desc := task.Description
+	if len([]rune(desc)) > descWidth-1 { // account for space
+		desc = string([]rune(desc)[:descWidth-4]) + "..."
+	}
+	desc = fmt.Sprintf("%-*s", descWidth, desc)
+
+	priority := "--"
+	if task.Priority.Valid {
+		priority = task.Priority.String
+	}
+	priority = fmt.Sprintf("%-*s", priWidth, priority)
+
+	due := "--"
+	overdue := false
+	if task.DueDate.Valid {
+		due = task.DueDate.Time.Format("2006-01-02")
+		now := time.Now()
+
+		// Compare only the dates, not times
+		dueDate := time.Date(task.DueDate.Time.Year(), task.DueDate.Time.Month(), task.DueDate.Time.Day(), 0, 0, 0, 0, task.DueDate.Time.Location())
+		todayDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+		if dueDate.Before(todayDate) && (!task.CompletedAt.Valid) {
+			overdue = true
+		}
+	}
+	due = fmt.Sprintf("%-*s", dueWidth, due)
+
+	tags := "--"
+	if len(task.Tags) > 0 {
+		tags = strings.Join(task.Tags, ",")
+	}
+	tags = fmt.Sprintf("%-*s", tagsWidth, tags)
+
+	proj := projectName
+	if proj == "" {
+		proj = "--"
+	}
+	proj = fmt.Sprintf("%-*s", projWidth, proj)
+
+	status := task.Status
+	if status == "" {
+		status = "--"
+	}
+	status = fmt.Sprintf("%-*s", statusWidth, status)
+
+	completed := "--"
+	if task.CompletedAt.Valid {
+		completed = task.CompletedAt.Time.Format("2006-01-02 15:04")
+	}
+	completed = fmt.Sprintf("%-*s", completedWidth, completed)
+
+	// Now build the output with careful color control
+	if altBg {
+		// Print everything with a gray background
+		fmt.Print(darkGrayBg)
+
+		// ID (no color)
+		fmt.Print(id)
+
+		// Description (no color)
+		fmt.Print(desc)
+
+		// Priority (with color)
+		if task.Priority.Valid {
+			switch task.Priority.String {
+			case "H":
+				fmt.Print(red + priority[:len(priority)-1] + reset + darkGrayBg + " ")
+			case "M":
+				fmt.Print(yellow + priority[:len(priority)-1] + reset + darkGrayBg + " ")
+			case "L":
+				fmt.Print(green + priority[:len(priority)-1] + reset + darkGrayBg + " ")
+			default:
+				fmt.Print(priority)
+			}
+		} else {
+			fmt.Print(priority)
+		}
+
+		// Due (with color for overdue)
+		if overdue {
+			fmt.Print(red + due[:len(due)-1] + reset + darkGrayBg + " ")
+		} else {
+			fmt.Print(due)
+		}
+
+		// Tags (no color)
+		fmt.Print(tags)
+
+		// Project (no color)
+		fmt.Print(proj)
+
+		// Status (with color)
+		switch strings.TrimSpace(status) {
+		case "completed":
+			fmt.Print(brightGreen + strings.TrimSpace(status) + reset + darkGrayBg + strings.Repeat(" ", statusWidth-len(strings.TrimSpace(status))))
+		case "pending":
+			fmt.Print(brightYellow + strings.TrimSpace(status) + reset + darkGrayBg + strings.Repeat(" ", statusWidth-len(strings.TrimSpace(status))))
+		case "active":
+			fmt.Print(brightCyan + strings.TrimSpace(status) + reset + darkGrayBg + strings.Repeat(" ", statusWidth-len(strings.TrimSpace(status))))
+		default:
+			fmt.Print(status)
+		}
+
+		// Completed (colored if status is completed)
+		if task.Status == "completed" && task.CompletedAt.Valid {
+			fmt.Print(brightGreen + completed + reset)
+		} else {
+			fmt.Print(completed)
+		}
+
+		// End with erase to end of line and reset
+		fmt.Print("\033[K" + reset + "\n")
+	} else {
+		// Regular row - apply colors directly to the specific fields
+
+		// ID (no color)
+		fmt.Print(id)
+
+		// Description (no color)
+		fmt.Print(desc)
+
+		// Priority (with color)
+		if task.Priority.Valid {
+			switch task.Priority.String {
+			case "H":
+				fmt.Print(red + priority[:len(priority)-1] + reset + " ")
+			case "M":
+				fmt.Print(yellow + priority[:len(priority)-1] + reset + " ")
+			case "L":
+				fmt.Print(green + priority[:len(priority)-1] + reset + " ")
+			default:
+				fmt.Print(priority)
+			}
+		} else {
+			fmt.Print(priority)
+		}
+
+		// Due (with color for overdue)
+		if overdue {
+			fmt.Print(red + due[:len(due)-1] + reset + " ")
+		} else {
+			fmt.Print(due)
+		}
+
+		// Tags (no color)
+		fmt.Print(tags)
+
+		// Project (no color)
+		fmt.Print(proj)
+
+		// Status (with color)
+		switch strings.TrimSpace(status) {
+		case "completed":
+			fmt.Print(brightGreen + strings.TrimSpace(status) + reset + strings.Repeat(" ", statusWidth-len(strings.TrimSpace(status))))
+		case "pending":
+			fmt.Print(brightYellow + strings.TrimSpace(status) + reset + strings.Repeat(" ", statusWidth-len(strings.TrimSpace(status))))
+		case "active":
+			fmt.Print(brightCyan + strings.TrimSpace(status) + reset + strings.Repeat(" ", statusWidth-len(strings.TrimSpace(status))))
+		default:
+			fmt.Print(status)
+		}
+
+		// Completed (colored if status is completed)
+		if task.Status == "completed" && task.CompletedAt.Valid {
+			fmt.Print(brightGreen + completed + reset)
+		} else {
+			fmt.Print(completed)
+		}
+
+		fmt.Println()
+	}
+}
+
+// PrintTaskTableList prints tasks in Taskwarrior-style table format
+func PrintTaskTableList(tasks []sqlc.Task, taskMap map[int]int32, queries *sqlc.Queries, user *sqlc.User) {
+	PrintTaskTableHeader()
+	projectService := services.NewProjectService(queries)
+	// Build a reverse map from task ID to display index
+	idToDisplay := make(map[int32]int)
+	for displayIdx, taskID := range taskMap {
+		idToDisplay[taskID] = displayIdx
+	}
+	for i, t := range tasks {
+		projectName := "--"
+		if t.ProjectID.Valid {
+			project, err := projectService.GetProject(context.Background(), t.ProjectID.Int32, user.ID)
+			if err == nil && project != nil {
+				projectName = project.Name
+			}
+		}
+		displayIdx := idToDisplay[t.ID]
+		altBg := (i%2 == 1)
+		PrintTaskTableRow(displayIdx, t, projectName, altBg)
+	}
+}
+
+// PrintTaskMultiLineList prints tasks in the multi-line icon-based format and returns the task map
+func PrintTaskMultiLineList(tasks []sqlc.Task, queries *sqlc.Queries, user *sqlc.User) map[int]int32 {
+	return services.ProcessList(tasks, queries, user)
 }
